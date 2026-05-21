@@ -197,7 +197,7 @@
       padding: 18px;
       align-content: start;
     }
-      @media (max-width: 768px) {
+    @media (max-width: 768px) {
   .canvas-wrap {
     aspect-ratio: 9 / 16;
     width: 100%;
@@ -691,46 +691,47 @@ splashView.addEventListener("mousemove", (e) => {
 const cameraWidth = isMobile ? 720 : 960;
 const cameraHeight = isMobile ? 1280 : 540;
 
-globalCamera = new Camera(video, {
-  onFrame: async () => {
-    await activeHandsInstance.send({ image: video });
-    await activeFaceMeshInstance.send({ image: video });
-  },
-  width: cameraWidth,
-  height: cameraHeight,
-});
-      globalCamera.start().then(() => {
-        cameraStarted = true;
-        startButtonOn();
-        startBtn.disabled = true;
-        if (currentRuntime) currentRuntime.onCameraReady();
-      }).catch(startButtonError);
-    }
+function drawWebcamTo(targetCtx, dim = 0) {
+  const vw = video.videoWidth;
+  const vh = video.videoHeight;
 
-    function clearCanvas() {
-      ctx.fillStyle = "#050505";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
+  const cw = canvas.width;
+  const ch = canvas.height;
 
-    function playAudio(audio) {
-      audio.currentTime = 0;
-      audio.play().catch(() => {});
-    }
+  if (!vw || !vh) return;
 
-   function drawWebcamTo(targetCtx, dim = 0) {
+  const videoRatio = vw / vh;
+  const canvasRatio = cw / ch;
+
+  let sx, sy, sw, sh;
+
+  if (videoRatio > canvasRatio) {
+    // video più largo → taglia lati
+    sh = vh;
+    sw = vh * canvasRatio;
+    sx = (vw - sw) / 2;
+    sy = 0;
+  } else {
+    // video più alto → taglia sopra/sotto
+    sw = vw;
+    sh = vw / canvasRatio;
+    sx = 0;
+    sy = (vh - sh) / 2;
+  }
+
   targetCtx.save();
 
-  // mirror webcam
+  // mirror stile selfie
   targetCtx.scale(-1, 1);
+
   targetCtx.drawImage(
     video,
-    -canvas.width,
-    0,
-    canvas.width,
-    canvas.height
+    sx, sy, sw, sh,
+    -cw, 0, cw, ch
   );
 
   targetCtx.restore();
+}
 
   // dark cinematic overlay
   if (dim > 0) {
