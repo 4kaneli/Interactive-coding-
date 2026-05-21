@@ -1,0 +1,276 @@
+:root {
+  color-scheme: dark;
+  --bg: #050505;
+  --fg: #26ff00;
+  --muted: #aaa39a;
+  --line: rgba(244, 241, 234, 0.18);
+  --panel: rgba(255, 255, 255, 0.055);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  color: inherit;
+  font: inherit;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ── SPLASH ── */
+.splash {
+  position: relative;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding: 24px;
+  background: #050505;
+}
+
+.splash::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgba(5, 5, 5, 0.42), rgba(5, 5, 5, 0.92));
+}
+
+.splash-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: grayscale(1) contrast(1.08);
+}
+
+.splash-inner {
+  position: relative;
+  z-index: 1;
+  width: min(760px, 100%);
+  text-align: center;
+}
+
+.mini,
+.sub,
+.gallery-header p,
+.overlay p,
+.project-kicker,
+.project-status {
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 12px;
+}
+
+.splash h1 {
+  margin: 12px 0 14px;
+  font-size: clamp(58px, 14vw, 160px);
+  line-height: 0.86;
+  font-weight: 900;
+}
+
+#enterBtn,
+.project-button {
+  margin-top: 28px;
+  min-height: 44px;
+  padding: 0 24px;
+  border: 1px solid var(--fg);
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+}
+
+#enterBtn:hover,
+.project-button:hover {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+/* ── GALLERY ── */
+.gallery {
+  min-height: 100vh;
+  padding: clamp(24px, 5vw, 56px);
+}
+
+.gallery-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 28px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 18px;
+}
+
+.gallery-header h2 {
+  margin: 0;
+  font-size: clamp(36px, 8vw, 92px);
+  line-height: 0.9;
+}
+
+.gallery-header p {
+  margin: 0 0 8px;
+}
+
+/* Grid: 1 card occupa al massimo metà larghezza su desktop */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  max-width: 560px; /* 1 card non si allarga a tutto schermo */
+  gap: 18px;
+}
+
+.card {
+  position: relative;
+  min-height: 430px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: #111;
+}
+
+.card video {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  filter: grayscale(1) contrast(1.12);
+  transform: scale(1.01);
+  transition: filter 0.3s ease;
+}
+
+.card:hover video {
+  filter: grayscale(0) contrast(1.08);
+}
+
+.overlay {
+  position: absolute;
+  inset: auto 0 0;
+  padding: 18px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.78));
+}
+
+.overlay h3 {
+  margin: 0;
+  font-size: 28px;
+}
+
+.overlay p {
+  margin: 8px 0 0;
+}
+
+/* ── PROJECT PAGE ── */
+.project-page {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.project-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--line);
+}
+
+.project-back {
+  color: var(--muted);
+}
+
+.project-back:hover {
+  color: var(--fg);
+}
+
+.project-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 290px;
+  gap: 18px;
+  padding: 18px;
+}
+
+.canvas-wrap {
+  min-height: 0;
+  border: 1px solid var(--line);
+  background: #050505;
+}
+
+#output {
+  width: 100%;
+  height: 100%;
+  min-height: 520px;
+  display: block;
+}
+
+#webcam {
+  display: none;
+}
+
+.project-panel {
+  align-self: start;
+  padding: 16px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.project-panel h1 {
+  margin: 8px 0 12px;
+  font-size: 34px;
+}
+
+.project-panel p {
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.project-status {
+  margin-top: 18px;
+  min-height: 16px;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+  .grid {
+    max-width: 100%;
+    grid-template-columns: 1fr;
+  }
+
+  .project-stage {
+    grid-template-columns: 1fr;
+  }
+
+  .card {
+    min-height: 320px;
+  }
+
+  .gallery-header,
+  .project-topbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  #output {
+    min-height: 420px;
+  }
+}
