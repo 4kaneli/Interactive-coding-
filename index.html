@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="it">
 <head>
   <meta charset="UTF-8" />
@@ -254,6 +254,43 @@
       .gallery-header, .topbar { align-items: flex-start; flex-direction: column; }
       .grid { grid-template-columns: 1fr; }
     }
+    /* =========================
+   MOBILE RESPONSIVE FIX
+   ========================= */
+
+@media (max-width: 600px) {
+
+  /* Splash screen */
+  .splash h1 {
+    font-size: 44px;
+    line-height: 0.95;
+  }
+
+  .mini, .sub {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+  }
+
+  #enterBtn {
+    width: 80%;
+    max-width: 260px;
+  }
+
+  /* Gallery title */
+  .gallery-header h1 {
+    font-size: 36px;
+  }
+
+  /* Cards più piccole */
+  .card {
+    height: 220px;
+  }
+
+  /* 🔥 CAMERA MIRROR SOLO MOBILE */
+  video {
+    transform: scaleX(-1);
+  }
+}
   </style>
 </head>
 <body>
@@ -624,15 +661,16 @@ splashView.addEventListener("mousemove", (e) => {
         globalFaceData = res.multiFaceLandmarks && res.multiFaceLandmarks[0] ? res.multiFaceLandmarks[0] : null;
       });
 
-      globalCamera = new Camera(video, {
-        onFrame: async () => {
-          await activeHandsInstance.send({ image: video });
-          await activeFaceMeshInstance.send({ image: video });
-        },
-        width: 960,
-        height: 540,
-      });
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
+globalCamera = new Camera(video, {
+  onFrame: async () => {
+    await activeHandsInstance.send({ image: video });
+    await activeFaceMeshInstance.send({ image: video });
+  },
+  width: isMobile ? 540 : 960,
+  height: isMobile ? 960 : 540,
+});
       globalCamera.start().then(() => {
         cameraStarted = true;
         startButtonOn();
