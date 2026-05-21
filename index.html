@@ -201,7 +201,7 @@
   .canvas-wrap {
     aspect-ratio: 9 / 16;
     width: 100%;
-    height: 50vh;
+    height: 80vh;
     max-height: none;
   }
 
@@ -657,79 +657,90 @@ splashView.addEventListener("mousemove", (e) => {
       }
     }
 
-    function startGlobalCameraSystem() {
-      startButtonLoading();
-      
-      activeHandsInstance = new Hands({
-        locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
-      });
-      activeHandsInstance.setOptions({
-        maxNumHands: 2,
-        modelComplexity: 1,
-        minDetectionConfidence: 0.68,
-        minTrackingConfidence: 0.55,
-      });
-      activeHandsInstance.onResults(res => {
-        globalHandsData = res.multiHandLandmarks || [];
-      });
+    async function startGlobalCameraSystem() {
+  try {
+    startButtonLoading();
 
-      activeFaceMeshInstance = new FaceMesh({
-        locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
-      });
-      activeFaceMeshInstance.setOptions({
-        maxNumFaces: 1,
-        refineLandmarks: true,
-        minDetectionConfidence: 0.55,
-        minTrackingConfidence: 0.50,
-      });
-      activeFaceMeshInstance.onResults(res => {
-        globalFaceData = res.multiFaceLandmarks && res.multiFaceLandmarks[0] ? res.multiFaceLandmarks[0] : null;
-      });
+    await video.play(); // 🔥 IMPORTANTISSIMO su mobile
 
-      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    activeHandsInstance = new Hands({
+      locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
+    });
 
-const cameraWidth = isMobile ? 720 : 960;
-const cameraHeight = isMobile ? 1280 : 540;
+    activeHandsInstance.setOptions({
+      maxNumHands: 2,
+      modelComplexity: 1,
+      minDetectionConfidence: 0.7,
+      minTrackingConfidence: 0.6,
+    });
 
-function drawWebcamTo(targetCtx, dim = 0) {
-  if (!video || video.readyState < 2) return;
+    activeHandsInstance.onResults(res => {
+      globalHandsData = res.multiHandLandmarks || [];
+    });
 
-  const cw = canvas.width;
-  const ch = canvas.height;
+    activeFaceMeshInstance = new FaceMesh({
+      locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
+    });
 
-  const vw = video.videoWidth || cw;
-  const vh = video.videoHeight || ch;
+    activeFaceMeshInstance.setOptions({
+      maxNumFaces: 1,
+      refineLandmarks: true,
+      minDetectionConfidence: 0.6,
+      minTrackingConfidence: 0.5,
+    });
 
-  const videoRatio = vw / vh;
-  const canvasRatio = cw / ch;
+    activeFaceMeshInstance.onResults(res => {
+      globalFaceData =
+        res.multiFaceLandmarks?.[0] || null;
+    });
 
-  let sx = 0, sy = 0, sw = vw, sh = vh;
+    globalCamera = new Camera(video, {
+      onFrame: async () => {
+        await activeHandsInstance.send({ image: video });
+        await activeFaceMeshInstance.send({ image: video });
+      },
+      width: 1280,
+      height: 720,
+    });
 
-  if (videoRatio > canvasRatio) {
-    sw = vh * canvasRatio;
-    sx = (vw - sw) / 2;
-  } else {
-    sh = vw / canvasRatio;
-    sy = (vh - sh) / 2;
+    await globalCamera.start();
+
+    cameraStarted = true;
+    startButtonOn();
+    startBtn.disabled = true;
+
+    if (currentRuntime) currentRuntime.onCameraReady();
+
+  } catch (err) {
+    console.error(err);
+    startButtonError(err);
   }
+}
 
+    function clearCanvas() {
+      ctx.fillStyle = "#050505";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function playAudio(audio) {
+      audio.currentTime = 0;
+      audio.play().catch(() => {});
+    }
+
+   function drawWebcamTo(targetCtx, dim = 0) {
   targetCtx.save();
-  targetCtx.scale(-1, 1);
 
+  // mirror webcam
+  targetCtx.scale(-1, 1);
   targetCtx.drawImage(
     video,
-    sx, sy, sw, sh,
-    -cw, 0, cw, ch
+    -canvas.width,
+    0,
+    canvas.width,
+    canvas.height
   );
 
   targetCtx.restore();
-
-  // dark overlay (solo se serve)
-  if (dim > 0) {
-    targetCtx.fillStyle = `rgba(0,0,0,${dim})`;
-    targetCtx.fillRect(0, 0, cw, ch);
-  }
-}
 
   // dark cinematic overlay
   if (dim > 0) {
