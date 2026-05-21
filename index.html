@@ -212,6 +212,9 @@
       opacity: 0;
       pointer-events: none;
     }
+    #output, #webcam {
+  object-fit: cover;
+}
     #output {
       width: 100%;
       height: 100%;
@@ -319,7 +322,7 @@
     <main class="stage">
       <div class="canvas-wrap">
         <video id="webcam" autoplay muted playsinline></video>
-        <canvas id="output" width="960" height="540"></canvas>
+        <canvas id="output"></canvas>
       </div>
       <aside class="panel">
         <span id="projectNumber" class="project-kicker">experiment</span>
@@ -436,6 +439,22 @@
 
     // --- ORBITING BEE SWARM (cursor.png) ---
     const TRAIL_SIZE = 20;
+
+// 👇 INCOLLA QUI
+function setCanvasSize() {
+  const isMobile = window.innerWidth <= 600;
+
+  if (isMobile) {
+    canvas.width = 720;
+    canvas.height = 1280;
+  } else {
+    canvas.width = 960;
+    canvas.height = 540;
+  }
+}
+
+setCanvasSize();
+window.addEventListener("resize", setCanvasSize);
 
 const trailElements = [];
 
@@ -663,13 +682,16 @@ splashView.addEventListener("mousemove", (e) => {
 
       const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
+const cameraWidth = isMobile ? 720 : 960;
+const cameraHeight = isMobile ? 1280 : 540;
+
 globalCamera = new Camera(video, {
   onFrame: async () => {
     await activeHandsInstance.send({ image: video });
     await activeFaceMeshInstance.send({ image: video });
   },
-  width: isMobile ? 540 : 960,
-  height: isMobile ? 960 : 540,
+  width: cameraWidth,
+  height: cameraHeight,
 });
       globalCamera.start().then(() => {
         cameraStarted = true;
