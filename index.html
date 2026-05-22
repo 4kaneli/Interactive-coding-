@@ -2,8 +2,10 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Interactive coding</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Interactive Coding</title>
   <style>
     :root {
       color-scheme: dark;
@@ -14,29 +16,38 @@
       --panel: rgba(255,255,255,.055);
       --cyan: #99ff00;
       --green: #00ff55;
+      /* Mobile safe area support */
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left: env(safe-area-inset-left, 0px);
+      --safe-right: env(safe-area-inset-right, 0px);
     }
 
-    * { box-sizing: border-box; }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     html, body {
-      margin: 2;
+      margin: 0;
       min-height: 100%;
       background: var(--bg);
       color: var(--fg);
       font-family: Arial, Helvetica, sans-serif;
       overflow-x: hidden;
+      /* Prevent pull-to-refresh on mobile */
+      overscroll-behavior: none;
     }
-    button { color: inherit; font: inherit; }
+    button { color: inherit; font: inherit; touch-action: manipulation; }
     .hidden { display: none !important; }
 
-    .view { min-height: 100vh; }
-    
-    /* Splash Screen */
+    .view { min-height: 100dvh; }
+
+    /* ===================== SPLASH ===================== */
     .view.splash {
       position: relative;
       display: grid;
       place-items: center;
       align-content: center;
       padding: 24px;
+      padding-top: calc(24px + var(--safe-top));
+      padding-bottom: calc(24px + var(--safe-bottom));
       background:
         radial-gradient(circle at 50% 36%, rgba(255,255,255,.08), transparent 34%),
         linear-gradient(#090909, #020202);
@@ -50,12 +61,10 @@
       z-index: 2;
       pointer-events: none;
     }
-    .splash-inner button {
-      pointer-events: auto;
-    }
+    .splash-inner button { pointer-events: auto; }
     .splash h1 {
       margin: 12px 0 14px;
-      font-size: 120px;
+      font-size: clamp(52px, 13vw, 120px);
       line-height: .86;
       letter-spacing: 0;
     }
@@ -63,20 +72,22 @@
       color: var(--muted);
       text-transform: uppercase;
       letter-spacing: .14em;
-      font-size: 12px;
+      font-size: clamp(10px, 2.5vw, 12px);
     }
     #enterBtn {
-      min-height: 44px;
+      min-height: 52px;
+      min-width: 44px;
       margin-top: 28px;
       padding: 0 26px;
       border: 1px solid var(--fg);
       border-radius: 4px;
       background: transparent;
       cursor: pointer;
+      font-size: 14px;
     }
-    #enterBtn:hover { background: var(--fg); color: var(--bg); }
-    
-    /* Bee swarm cursor (cursor.png) */
+    #enterBtn:hover, #enterBtn:active { background: var(--fg); color: var(--bg); }
+
+    /* Cursor trail (desktop only) */
     .cursor-trail {
       position: fixed;
       width: 37px;
@@ -86,14 +97,17 @@
       background-repeat: no-repeat;
       pointer-events: none;
       z-index: 9999;
-      transform: translate(-50%, -50%) rotate(0deg);
+      transform: translate(-50%, -50%);
       opacity: 0;
       transition: opacity 0.2s;
     }
+    @media (hover: none) { .cursor-trail { display: none !important; } }
 
-    /* Galleria e Anteprime Corrette */
+    /* ===================== GALLERY ===================== */
     .gallery {
-      padding: clamp(46px, 7vw, 92px) clamp(22px, 4vw, 52px);
+      padding: clamp(20px, 5vw, 92px) clamp(14px, 4vw, 52px);
+      padding-top: calc(clamp(20px, 5vw, 92px) + var(--safe-top));
+      padding-bottom: calc(clamp(20px, 5vw, 92px) + var(--safe-bottom));
     }
     .gallery-header {
       display: flex;
@@ -106,7 +120,7 @@
     }
     .gallery-header h1 {
       margin: 0;
-      font-size: 90px;
+      font-size: clamp(42px, 11vw, 90px);
       line-height: .86;
       letter-spacing: 0;
     }
@@ -118,22 +132,20 @@
       color: var(--muted);
       text-transform: uppercase;
       letter-spacing: .14em;
-      font-size: 12px;
+      font-size: clamp(10px, 2.5vw, 12px);
     }
 
     .grid {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 20px;
+      gap: 16px;
       width: 100%;
     }
-    
-    /* Risolto bug visualizzazione quadrati anteprima */
     .card {
       position: relative;
       display: block;
       width: 100%;
-      height: 300px;
+      height: 240px;
       border: 1px solid var(--line);
       border-radius: 6px;
       overflow: hidden;
@@ -146,71 +158,83 @@
       padding: 0;
       transition: border-color 0.3s, transform 0.3s;
     }
-    .card:hover {
-      border-color: var(--fg);
-      transform: translateY(-4px);
-    }
+    .card:hover { border-color: var(--fg); transform: translateY(-4px); }
+    .card:active { border-color: var(--fg); transform: scale(0.97); }
     .overlay {
       position: absolute;
       inset: auto 0 0;
       z-index: 2;
-      padding: 20px;
+      padding: 16px;
       background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.4) 70%, transparent 100%);
       pointer-events: none;
     }
     .overlay h2 {
-      margin: 0 0 6px;
-      font-size: 24px;
+      margin: 0 0 4px;
+      font-size: clamp(16px, 4vw, 24px);
       line-height: 1.1;
-      letter-spacing: 0;
     }
 
+    /* ===================== PROJECT ===================== */
     .project {
-      display: grid;
-      grid-template-rows: auto 1fr;
+      display: flex;
+      flex-direction: column;
+      min-height: 100dvh;
     }
     .topbar {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 16px;
-      padding: 16px 22px;
+      padding: 14px 18px;
+      padding-top: calc(14px + var(--safe-top));
+      padding-left: calc(18px + var(--safe-left));
+      padding-right: calc(18px + var(--safe-right));
       border-bottom: 1px solid var(--line);
+      flex-shrink: 0;
     }
     #backBtn {
       border: 0;
       background: transparent;
       color: var(--muted);
       cursor: pointer;
-      padding: 0;
+      padding: 8px 0;
       text-transform: uppercase;
       letter-spacing: .14em;
       font-size: 12px;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
     }
-    #backBtn:hover { color: var(--fg); }
+    #backBtn:hover, #backBtn:active { color: var(--fg); }
+
+    /* ---- STAGE: Desktop layout ---- */
     .stage {
       width: min(100%, 1120px);
-      margin: 44px auto 0;
+      margin: 32px auto 0;
       display: grid;
       grid-template-columns: minmax(0, 820px) 280px;
       gap: 18px;
       padding: 18px;
       align-content: start;
+      flex: 1;
     }
-    @media (max-width: 768px) {
-  .canvas-wrap {
-    aspect-ratio: 9 / 16;
-    width: 100%;
-    height: 80vh;
-    max-height: none;
-  }
-
-  #output,
-  #webcam {
-    width: 100%;
-    height: 100%;
-  }
-}
+    .canvas-wrap {
+      position: relative;
+      border: 1px solid var(--line);
+      background: #000;
+      overflow: hidden;
+    }
+    /* Desktop: 16:9 canvas */
+    .canvas-wrap.desktop-ratio {
+      aspect-ratio: 16 / 9;
+      max-height: 68vh;
+    }
+    /* Mobile: portrait 9:16 canvas */
+    .canvas-wrap.mobile-ratio {
+      aspect-ratio: 9 / 16;
+      width: 100%;
+      max-height: none;
+    }
     #webcam {
       position: absolute;
       width: 1px;
@@ -218,9 +242,6 @@
       opacity: 0;
       pointer-events: none;
     }
-    #output, #webcam {
-  object-fit: cover;
-}
     #output {
       width: 100%;
       height: 100%;
@@ -228,7 +249,6 @@
     }
     .panel {
       align-self: start;
-      margin-top: 18px;
       padding: 16px;
       border: 1px solid var(--line);
       border-radius: 4px;
@@ -236,73 +256,86 @@
     }
     .panel h2 {
       margin: 8px 0 12px;
-      font-size: 32px;
+      font-size: clamp(22px, 6vw, 32px);
       line-height: 1;
     }
     .panel p {
       color: var(--muted);
       line-height: 1.52;
+      font-size: clamp(12px, 3vw, 14px);
     }
     #startBtn {
       width: 100%;
-      min-height: 44px;
+      min-height: 52px;
       margin-top: 20px;
       border: 1px solid var(--fg);
       border-radius: 4px;
       background: transparent;
       cursor: pointer;
+      font-size: 14px;
+      touch-action: manipulation;
     }
-    #startBtn:hover { background: var(--fg); color: var(--bg); }
-    .status { min-height: 18px; margin-top: 16px; }
+    #startBtn:hover, #startBtn:active { background: var(--fg); color: var(--bg); }
+    .status { min-height: 18px; margin-top: 16px; font-size: 11px; }
 
-    @media (max-width: 1000px) {
+    /* ===================== MOBILE OVERRIDES ===================== */
+    @media (max-width: 768px) {
+      .gallery {
+        padding: clamp(14px, 4vw, 30px);
+        padding-top: calc(clamp(14px, 4vw, 30px) + var(--safe-top));
+        padding-bottom: calc(60px + var(--safe-bottom));
+      }
+      .grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .card { height: 180px; }
+
+      .stage {
+        margin: 0;
+        grid-template-columns: 1fr;
+        gap: 0;
+        padding: 0;
+        overflow-y: auto;
+      }
+      .canvas-wrap {
+        border-left: none;
+        border-right: none;
+        border-radius: 0;
+      }
+      .panel {
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+        border-top: none;
+        padding-bottom: calc(16px + var(--safe-bottom));
+      }
+      /* Mobile: show portrait canvas */
+      .canvas-wrap.desktop-ratio { display: none; }
+      .canvas-wrap.mobile-ratio { display: block; }
+    }
+
+    @media (min-width: 769px) {
+      /* Desktop: hide portrait canvas, show landscape */
+      .canvas-wrap.desktop-ratio { display: block; }
+      .canvas-wrap.mobile-ratio { display: none; }
+    }
+
+    @media (max-width: 1000px) and (min-width: 769px) {
       .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .stage { grid-template-columns: 1fr; }
     }
     @media (max-width: 620px) {
-      .gallery-header, .topbar { align-items: flex-start; flex-direction: column; }
-      .grid { grid-template-columns: 1fr; }
+      .gallery-header, .topbar { align-items: flex-start; flex-direction: column; gap: 8px; }
+      .gallery-header { flex-direction: row; align-items: flex-end; }
     }
-    /* =========================
-   MOBILE RESPONSIVE FIX
-   ========================= */
 
-@media (max-width: 600px) {
-
-  /* Splash screen */
-  .splash h1 {
-    font-size: 44px;
-    line-height: 0.95;
-  }
-
-  .mini, .sub {
-    font-size: 10px;
-    letter-spacing: 0.18em;
-  }
-
-  #enterBtn {
-    width: 80%;
-    max-width: 260px;
-  }
-
-  /* Gallery title */
-  .gallery-header h1 {
-    font-size: 36px;
-  }
-
-  /* Cards più piccole */
-  .card {
-    height: 220px;
-  }
-
-  /* 🔥 CAMERA MIRROR SOLO MOBILE */
-  video {
-    transform: scaleX(-1);
-  }
-}
+    /* Prevent body scroll when project open (iOS fix) */
+    body.project-open { overflow: hidden; position: fixed; width: 100%; }
   </style>
 </head>
 <body>
+  <!-- SPLASH -->
   <section id="view-splash" class="view splash">
     <div class="splash-inner">
       <p class="mini">interactive webcam filters</p>
@@ -312,6 +345,7 @@
     </div>
   </section>
 
+  <!-- GALLERY -->
   <section id="view-gallery" class="view gallery hidden">
     <header class="gallery-header">
       <h1>Creative Coding</h1>
@@ -320,16 +354,25 @@
     <div id="projectGrid" class="grid"></div>
   </section>
 
+  <!-- PROJECT VIEW -->
   <section id="view-project" class="view project hidden">
     <header class="topbar">
-      <button id="backBtn" type="button">Back to gallery</button>
+      <button id="backBtn" type="button">← Back</button>
       <span id="projectKicker" class="project-kicker">mediapipe - webcam</span>
     </header>
     <main class="stage">
-      <div class="canvas-wrap">
-        <video id="webcam" autoplay muted playsinline></video>
-        <canvas id="output"></canvas>
+      <video id="webcam" autoplay muted playsinline></video>
+
+      <!-- LANDSCAPE canvas (desktop) -->
+      <div class="canvas-wrap desktop-ratio">
+        <canvas id="output" width="960" height="540"></canvas>
       </div>
+
+      <!-- PORTRAIT canvas (mobile) -->
+      <div class="canvas-wrap mobile-ratio">
+        <canvas id="output-mobile" width="540" height="960"></canvas>
+      </div>
+
       <aside class="panel">
         <span id="projectNumber" class="project-kicker">experiment</span>
         <h2 id="projectTitle">Project</h2>
@@ -345,88 +388,47 @@
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
 
   <script>
+    // ===================== MOBILE DETECTION =====================
+    const isMobile = () => window.innerWidth <= 768 || ('ontouchstart' in window);
+
+    // Active canvas & context (switches based on mobile/desktop)
+    let canvas = document.getElementById("output");
+    let ctx = canvas.getContext("2d", { willReadFrequently: true });
+    const canvasDesktop = document.getElementById("output");
+    const canvasMobile = document.getElementById("output-mobile");
+    const ctxDesktop = canvasDesktop.getContext("2d", { willReadFrequently: true });
+    const ctxMobile = canvasMobile.getContext("2d", { willReadFrequently: true });
+
+    function updateActiveCanvas() {
+      if (isMobile()) {
+        canvas = canvasMobile;
+        ctx = ctxMobile;
+      } else {
+        canvas = canvasDesktop;
+        ctx = ctxDesktop;
+      }
+    }
+    updateActiveCanvas();
+    window.addEventListener('resize', updateActiveCanvas);
+
+    // ===================== PROJECT DATA =====================
     const PROJECTS = [
-      {
-        id: "electric",
-        number: "experiment 01",
-        title: "Electricity",
-        kicker: "mediapipe - two fingers",
-        tagline: "blue to red signal",
-        description: "Bring the two index fingertips closer: an electric arc appears. It starts blue, then turns red as the fingers approach.",
-        img: "assets/img/electricity.png",
-      },
-      {
-        id: "torch",
-        number: "experiment 02",
-        title: "Torch",
-        kicker: "mediapipe - index torch",
-        tagline: "finger flashlight",
-        description: "Point your index finger like a flashlight. The beam follows the finger direction and plays on/off click sounds. The rest of the camera remains dark to give a cinematic effect.",
-        img: "assets/img/light.png",
-      },
-      {
-        id: "piano",
-        number: "experiment 03",
-        title: "Finger Piano",
-        kicker: "mediapipe - finger notes",
-        tagline: "one finger one note",
-        description: "Each finger plays a different note. The piano is invisible: only the active fingertips light up.",
-        img: "assets/img/music.png",
-      },
-      {
-        id: "scan",
-        number: "experiment 04",
-        title: "Scan Effect",
-        kicker: "mediapipe - pinch button",
-        tagline: "pinch to scan",
-        description: "Pinch your thumb and index to trigger the scan. The webcam will freeze while a high-speed green laser line goes down and up. Finally, real-time advanced tracking lines and magnified analysis windows will display eye statuses and face matrix logs.",
-        img: "assets/img/scan.png",
-      },
-      {
-        id: "dice",
-        number: "experiment 05",
-        title: "Dice",
-        kicker: "mediapipe - closed hand roll",
-        tagline: "close to shake",
-        description: "Close your hand to hide and shake the die. Open your hand to roll a new face with a rolling sound.",
-        img: "assets/img/dice.png",
-      },
-      {
-        id: "butterfly",
-        number: "experiment 06",
-        title: "Butterfly",
-        kicker: "face mesh - butterfly overlay",
-        tagline: "butterfly lands on face",
-        description: "A butterfly flies in and attaches to the face, then floats and rotates with a light wing tremble.",
-        img: "assets/img/butterf.png",
-      },
-      {
-        id: "glitch",
-        number: "experiment 07",
-        title: "X-Ray Frame",
-        kicker: "mediapipe - two finger frame",
-        tagline: "scan through reality",
-        description: "Point both index fingers to define a rectangular area on screen. Everything inside becomes an X-ray scan: high-contrast bones and tissue rendered in electric blue and white.",
-        img: "assets/img/glitch.png",
-      },
-      {
-        id: "telekinesis",
-        number: "experiment 08",
-        title: "Telekinesis",
-        kicker: "mediapipe - pinch ball",
-        tagline: "grab and throw",
-        description: "Pinch your thumb and index to grab the energy ball. Move your hand fast and release the pinch to launch it, bouncing off the frame edges with reactive physics.",
-        img: "assets/img/ball2.png",
-      },
+      { id:"electric", number:"experiment 01", title:"Electricity", kicker:"mediapipe - two fingers", tagline:"blue to red signal", description:"Bring the two index fingertips closer: an electric arc appears. It starts blue, then turns red as the fingers approach.", img:"assets/img/electricity.png" },
+      { id:"torch", number:"experiment 02", title:"Torch", kicker:"mediapipe - index torch", tagline:"finger flashlight", description:"Point your index finger like a flashlight. The beam follows the finger direction and plays on/off click sounds.", img:"assets/img/light.png" },
+      { id:"piano", number:"experiment 03", title:"Finger Piano", kicker:"mediapipe - finger notes", tagline:"one finger one note", description:"Each finger plays a different note. The piano is invisible: only the active fingertips light up.", img:"assets/img/music.png" },
+      { id:"scan", number:"experiment 04", title:"Scan Effect", kicker:"mediapipe - pinch button", tagline:"pinch to scan", description:"Pinch your thumb and index to trigger the scan. A green laser scans down and up, then shows face tracking and analysis.", img:"assets/img/scan.png" },
+      { id:"dice", number:"experiment 05", title:"Dice", kicker:"mediapipe - closed hand roll", tagline:"close to shake", description:"Close your hand to hide and shake the die. Open your hand to roll a new face.", img:"assets/img/dice.png" },
+      { id:"butterfly", number:"experiment 06", title:"Butterfly", kicker:"face mesh - butterfly overlay", tagline:"butterfly lands on face", description:"A butterfly flies in and attaches to the face, then floats and rotates with a light wing tremble.", img:"assets/img/butterf.png" },
+      { id:"glitch", number:"experiment 07", title:"X-Ray Frame", kicker:"mediapipe - two finger frame", tagline:"scan through reality", description:"Point both index fingers to define a rectangular area. Everything inside becomes an X-ray scan.", img:"assets/img/glitch.png" },
+      { id:"telekinesis", number:"experiment 08", title:"Telekinesis", kicker:"mediapipe - pinch ball", tagline:"grab and throw", description:"Pinch your thumb and index to grab the energy ball. Release to launch it with physics.", img:"assets/img/ball2.png" },
     ];
 
+    // ===================== DOM REFS =====================
     const splashView = document.getElementById("view-splash");
     const galleryView = document.getElementById("view-gallery");
     const projectView = document.getElementById("view-project");
     const grid = document.getElementById("projectGrid");
     const video = document.getElementById("webcam");
-    const canvas = document.getElementById("output");
-    const ctx = canvas.getContext("2d", { willReadFrequently: true });
     const startBtn = document.getElementById("startBtn");
     const statusEl = document.getElementById("status");
     const projectTitle = document.getElementById("projectTitle");
@@ -439,167 +441,52 @@
     let activeHandsInstance = null;
     let activeFaceMeshInstance = null;
     let currentRuntime = null;
-
     let globalHandsData = [];
     let globalFaceData = null;
 
-    // --- ORBITING BEE SWARM (cursor.png) ---
-    const TRAIL_SIZE = 20;
-
-// 👇 INCOLLA QUI
-function setCanvasSize() {
-  const isMobile = window.innerWidth <= 600;
-
-  if (isMobile) {
-    canvas.width = 720;
-    canvas.height = 1280;
-  } else {
-    canvas.width = 960;
-    canvas.height = 540;
-  }
-}
-
-setCanvasSize();
-window.addEventListener("resize", setCanvasSize);
-
-const trailElements = [];
-
-const swarmOffsets = [];
-
-
-
-for (let i = 0; i < TRAIL_SIZE; i++) {
-
-  const el = document.createElement("div");
-
-  el.className = "cursor-trail";
-
-  splashView.appendChild(el);
-
-  trailElements.push(el);
-
-
-
-  const angle = Math.random() * Math.PI * 2;
-
-
-
-  // più “sciame vivo” → raggio più variabile
-
-  const radius = 10 + Math.random() * 70;
-
-
-
-  swarmOffsets.push({
-
-    angle,
-
-    radius,
-
-    speed: 0.06 + Math.random() * 0.08,
-
-    drift: (Math.random() - 0.5) * 0.02
-
-  });
-
-}
-
-
-
-const currentPositions = Array(TRAIL_SIZE)
-
-  .fill(null)
-
-  .map(() => ({ x: 0, y: 0 }));
-
-
-
-splashView.addEventListener("mousemove", (e) => {
-
-  const rect = splashView.getBoundingClientRect();
-
-  const mx = e.clientX - rect.left;
-
-  const my = e.clientY - rect.top;
-
-
-
-  const time = Date.now() * 0.002;
-
-
-
-  for (let i = 0; i < TRAIL_SIZE; i++) {
-
-    const o = swarmOffsets[i];
-
-
-
-    // movimento orbitale + evoluzione nel tempo (effetto sciame)
-
-    o.angle += o.drift;
-
-
-
-    const offsetX =
-
-      Math.cos(o.angle + time) * o.radius +
-
-      Math.sin(time * o.speed) * 6;
-
-
-
-    const offsetY =
-
-      Math.sin(o.angle + time) * o.radius +
-
-      Math.cos(time * o.speed) * 6;
-
-
-
-    const targetX = mx + offsetX;
-
-    const targetY = my + offsetY;
-
-
-
-    // smoothing più “organico”
-
-    currentPositions[i].x += (targetX - currentPositions[i].x) * o.speed;
-
-    currentPositions[i].y += (targetY - currentPositions[i].y) * o.speed;
-
-
-
-    // micro jitter tipo “api vive”
-
-    currentPositions[i].x += (Math.random() - 0.5) * 0.6;
-
-    currentPositions[i].y += (Math.random() - 0.5) * 0.6;
-
-
-
-    trailElements[i].style.left = currentPositions[i].x + "px";
-
-    trailElements[i].style.top = currentPositions[i].y + "px";
-
-
-
-    // fade più naturale (testa più intensa, coda più morbida)
-
-    const t = i / TRAIL_SIZE;
-
-    trailElements[i].style.opacity = 0.25 + (1 - t) * 0.6;
-
-  }
-
-});
-
+    // ===================== CURSOR TRAIL (desktop only) =====================
+    if (!('ontouchstart' in window)) {
+      const TRAIL_SIZE = 20;
+      const trailElements = [];
+      const swarmOffsets = [];
+      for (let i = 0; i < TRAIL_SIZE; i++) {
+        const el = document.createElement("div");
+        el.className = "cursor-trail";
+        splashView.appendChild(el);
+        trailElements.push(el);
+        swarmOffsets.push({ angle: Math.random() * Math.PI * 2, radius: 10 + Math.random() * 70, speed: 0.06 + Math.random() * 0.08, drift: (Math.random() - 0.5) * 0.02 });
+      }
+      const currentPositions = Array(TRAIL_SIZE).fill(null).map(() => ({ x: 0, y: 0 }));
+      splashView.addEventListener("mousemove", (e) => {
+        const rect = splashView.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        const time = Date.now() * 0.002;
+        for (let i = 0; i < TRAIL_SIZE; i++) {
+          const o = swarmOffsets[i];
+          o.angle += o.drift;
+          const offsetX = Math.cos(o.angle + time) * o.radius + Math.sin(time * o.speed) * 6;
+          const offsetY = Math.sin(o.angle + time) * o.radius + Math.cos(time * o.speed) * 6;
+          const targetX = mx + offsetX;
+          const targetY = my + offsetY;
+          currentPositions[i].x += (targetX - currentPositions[i].x) * o.speed;
+          currentPositions[i].y += (targetY - currentPositions[i].y) * o.speed;
+          currentPositions[i].x += (Math.random() - 0.5) * 0.6;
+          currentPositions[i].y += (Math.random() - 0.5) * 0.6;
+          trailElements[i].style.left = currentPositions[i].x + "px";
+          trailElements[i].style.top = currentPositions[i].y + "px";
+          const t = i / TRAIL_SIZE;
+          trailElements[i].style.opacity = 0.25 + (1 - t) * 0.6;
+        }
+      });
+    }
+
+    // ===================== NAVIGATION =====================
     document.getElementById("enterBtn").addEventListener("click", () => {
       splashView.classList.add("hidden");
       galleryView.classList.remove("hidden");
     });
 
-    // SISTEMATO: Caricamento diretto delle immagini di anteprime tramite stile inline nativo cross-browser
     grid.innerHTML = PROJECTS.map(p => `
       <button class="card" type="button" data-project="${p.id}" style="background-image: url('${p.img}');">
         <div class="overlay">
@@ -620,6 +507,7 @@ splashView.addEventListener("mousemove", (e) => {
       currentRuntime = null;
       projectView.classList.add("hidden");
       galleryView.classList.remove("hidden");
+      document.body.classList.remove("project-open");
       clearCanvas();
     });
 
@@ -632,7 +520,7 @@ splashView.addEventListener("mousemove", (e) => {
       projectKicker.textContent = project.kicker;
       projectNumber.textContent = project.number;
       projectDescription.textContent = project.description;
-      
+
       if (cameraStarted) {
         startBtn.textContent = "Camera active";
         startBtn.style.opacity = ".42";
@@ -644,12 +532,14 @@ splashView.addEventListener("mousemove", (e) => {
         startBtn.style.opacity = "1";
         statusEl.textContent = "press start";
       }
-      
+
       galleryView.classList.add("hidden");
       projectView.classList.remove("hidden");
+      document.body.classList.add("project-open");
+      updateActiveCanvas();
       clearCanvas();
       currentRuntime.init();
-      
+
       if (cameraStarted) {
         currentRuntime.onCameraReady();
       } else {
@@ -657,69 +547,53 @@ splashView.addEventListener("mousemove", (e) => {
       }
     }
 
-    async function startGlobalCameraSystem() {
-  try {
-    startButtonLoading();
+    // ===================== CAMERA SYSTEM =====================
+    function startGlobalCameraSystem() {
+      startButtonLoading();
+      const mobile = isMobile();
 
-    await video.play(); // 🔥 IMPORTANTISSIMO su mobile
+      activeHandsInstance = new Hands({
+        locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
+      });
+      activeHandsInstance.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.68, minTrackingConfidence: 0.55 });
+      activeHandsInstance.onResults(res => { globalHandsData = res.multiHandLandmarks || []; });
 
-    activeHandsInstance = new Hands({
-      locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
-    });
+      activeFaceMeshInstance = new FaceMesh({
+        locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
+      });
+      activeFaceMeshInstance.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.55, minTrackingConfidence: 0.50 });
+      activeFaceMeshInstance.onResults(res => { globalFaceData = res.multiFaceLandmarks?.[0] ?? null; });
 
-    activeHandsInstance.setOptions({
-      maxNumHands: 2,
-      modelComplexity: 1,
-      minDetectionConfidence: 0.7,
-      minTrackingConfidence: 0.6,
-    });
+      // Mobile: portrait camera (9:16 → 540×960)
+      // Desktop: landscape (16:9 → 960×540)
+      const camWidth = mobile ? 540 : 960;
+      const camHeight = mobile ? 960 : 540;
 
-    activeHandsInstance.onResults(res => {
-      globalHandsData = res.multiHandLandmarks || [];
-    });
+      globalCamera = new Camera(video, {
+        onFrame: async () => {
+          await activeHandsInstance.send({ image: video });
+          await activeFaceMeshInstance.send({ image: video });
+        },
+        width: camWidth,
+        height: camHeight,
+        facingMode: mobile ? "user" : "user",
+      });
 
-    activeFaceMeshInstance = new FaceMesh({
-      locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
-    });
+      globalCamera.start().then(() => {
+        cameraStarted = true;
+        startButtonOn();
+        startBtn.disabled = true;
+        if (currentRuntime) currentRuntime.onCameraReady();
+      }).catch(startButtonError);
+    }
 
-    activeFaceMeshInstance.setOptions({
-      maxNumFaces: 1,
-      refineLandmarks: true,
-      minDetectionConfidence: 0.6,
-      minTrackingConfidence: 0.5,
-    });
-
-    activeFaceMeshInstance.onResults(res => {
-      globalFaceData =
-        res.multiFaceLandmarks?.[0] || null;
-    });
-
-    globalCamera = new Camera(video, {
-      onFrame: async () => {
-        await activeHandsInstance.send({ image: video });
-        await activeFaceMeshInstance.send({ image: video });
-      },
-      width: 1280,
-      height: 720,
-    });
-
-    await globalCamera.start();
-
-    cameraStarted = true;
-    startButtonOn();
-    startBtn.disabled = true;
-
-    if (currentRuntime) currentRuntime.onCameraReady();
-
-  } catch (err) {
-    console.error(err);
-    startButtonError(err);
-  }
-}
-
+    // ===================== UTILITIES =====================
     function clearCanvas() {
-      ctx.fillStyle = "#050505";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // Clear both canvases
+      ctxDesktop.fillStyle = "#050505";
+      ctxDesktop.fillRect(0, 0, canvasDesktop.width, canvasDesktop.height);
+      ctxMobile.fillStyle = "#050505";
+      ctxMobile.fillRect(0, 0, canvasMobile.width, canvasMobile.height);
     }
 
     function playAudio(audio) {
@@ -727,27 +601,17 @@ splashView.addEventListener("mousemove", (e) => {
       audio.play().catch(() => {});
     }
 
-   function drawWebcamTo(targetCtx, dim = 0) {
-  targetCtx.save();
+    function drawWebcamTo(targetCtx, dim = 0) {
+      targetCtx.save();
+      targetCtx.scale(-1, 1);
+      targetCtx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+      targetCtx.restore();
+      if (dim > 0) {
+        targetCtx.fillStyle = `rgba(0,0,0,${dim})`;
+        targetCtx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+    }
 
-  // mirror webcam
-  targetCtx.scale(-1, 1);
-  targetCtx.drawImage(
-    video,
-    -canvas.width,
-    0,
-    canvas.width,
-    canvas.height
-  );
-
-  targetCtx.restore();
-
-  // dark cinematic overlay
-  if (dim > 0) {
-    targetCtx.fillStyle = `rgba(0,0,0,${dim})`;
-    targetCtx.fillRect(0, 0, canvas.width, canvas.height);
-  }
-}
     function point(landmark) {
       return { x: (1 - landmark.x) * canvas.width, y: landmark.y * canvas.height };
     }
@@ -764,17 +628,13 @@ splashView.addEventListener("mousemove", (e) => {
       return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
     }
 
-    function clamp(value, min, max) {
-      return Math.max(min, Math.min(max, value));
-    }
+    function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
 
     function handClosed(hand) {
       const tips = [8, 12, 16, 20];
       const joints = [6, 10, 14, 18];
       let folded = 0;
-      tips.forEach((tip, i) => {
-        if (hand[tip].y > hand[joints[i]].y) folded++;
-      });
+      tips.forEach((tip, i) => { if (hand[tip].y > hand[joints[i]].y) folded++; });
       return folded >= 3;
     }
 
@@ -802,84 +662,47 @@ splashView.addEventListener("mousemove", (e) => {
       const maxX = Math.min(canvas.width, Math.max(...xs) + padX);
       const minY = Math.max(0, Math.min(...ys) - padY);
       const maxY = Math.min(canvas.height, Math.max(...ys) + padY);
-      return {
-        x: minX,
-        y: minY,
-        w: Math.max(10, maxX - minX),
-        h: Math.max(10, maxY - minY),
-        cx: (minX + maxX) / 2,
-        cy: (minY + maxY) / 2,
-        rx: Math.max(10, (maxX - minX) / 2),
-        ry: Math.max(10, (maxY - minY) / 2),
-      };
+      return { x: minX, y: minY, w: Math.max(10, maxX - minX), h: Math.max(10, maxY - minY), cx: (minX + maxX) / 2, cy: (minY + maxY) / 2, rx: Math.max(10, (maxX - minX) / 2), ry: Math.max(10, (maxY - minY) / 2) };
     }
+
+    // ===================== RUNTIMES =====================
 
     function createElectric() {
       let rafId = null;
       let audioCtx, osc, gain, filterNode;
-      let indexes = null;
       const sparks = [];
-
-      function init() {
-        indexes = null;
-        sparks.length = 0;
-      }
-
+      function init() { sparks.length = 0; }
       function onCameraReady() {
         if (rafId) cancelAnimationFrame(rafId);
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         osc = audioCtx.createOscillator();
         gain = audioCtx.createGain();
         filterNode = audioCtx.createBiquadFilter();
-        osc.type = "sawtooth";
-        osc.frequency.value = 90;
-        gain.gain.value = 0;
-        filterNode.type = "bandpass";
-        filterNode.frequency.value = 900;
-        filterNode.Q.value = 2.4;
-        osc.connect(filterNode);
-        filterNode.connect(gain);
-        gain.connect(audioCtx.destination);
+        osc.type = "sawtooth"; osc.frequency.value = 90; gain.gain.value = 0;
+        filterNode.type = "bandpass"; filterNode.frequency.value = 900; filterNode.Q.value = 2.4;
+        osc.connect(filterNode); filterNode.connect(gain); gain.connect(audioCtx.destination);
         osc.start();
         loop();
       }
-
       function stop() {
-        if (rafId) cancelAnimationFrame(rafId);
-        rafId = null;
-        if (audioCtx) { try { audioCtx.close(); } catch(e) {} }
-        audioCtx = null;
+        if (rafId) cancelAnimationFrame(rafId); rafId = null;
+        if (audioCtx) { try { audioCtx.close(); } catch(e) {} } audioCtx = null;
       }
-
       function loop() {
         rafId = requestAnimationFrame(loop);
         drawWebcamTo(ctx, 0);
         updateSparks();
-        
-        if (globalHandsData.length < 2) {
-          indexes = null;
-          statusEl.textContent = "two hands needed";
-          return;
-        }
-        indexes = [point(globalHandsData[0][8]), point(globalHandsData[1][8])];
-
-        const [a, b] = indexes;
+        if (globalHandsData.length < 2) { statusEl.textContent = "two hands needed"; return; }
+        const [a, b] = [point(globalHandsData[0][8]), point(globalHandsData[1][8])];
         const dist = Math.hypot(a.x - b.x, a.y - b.y);
         const sig = clamp(1 - dist / (canvas.width * .48), 0, 1);
-        const r = Math.round(35 + sig * 220);
-        const g = Math.round(95 * (1 - sig));
-        const bl = Math.round(255 * (1 - sig));
+        const r = Math.round(35 + sig * 220), g = Math.round(95 * (1 - sig)), bl = Math.round(255 * (1 - sig));
         const color = `rgb(${r},${g},${bl})`;
         updateAudio(sig);
-        if (sig > .03) {
-          lightning(a, b, sig, color, 3);
-          if (Math.random() < sig * .7) spawnSparks((a.x + b.x) / 2, (a.y + b.y) / 2, sig, color);
-        }
-        halo(a, color, sig);
-        halo(b, color, sig);
+        if (sig > .03) { lightning(a, b, sig, color, 3); if (Math.random() < sig * .7) spawnSparks((a.x+b.x)/2, (a.y+b.y)/2, sig, color); }
+        halo(a, color, sig); halo(b, color, sig);
         statusEl.textContent = `signal ${Math.round(sig * 100)}%`;
       }
-
       function updateAudio(sig) {
         if (!audioCtx) return;
         const t = audioCtx.currentTime;
@@ -887,106 +710,55 @@ splashView.addEventListener("mousemove", (e) => {
         gain.gain.setTargetAtTime(sig * .13, t, .04);
         filterNode.frequency.setTargetAtTime(500 + sig * 2400, t, .04);
       }
-
       function lightning(a, b, sig, color, layers) {
         for (let layer = 0; layer < layers; layer++) {
-          const pts = [a];
-          const segments = 10 + Math.floor(sig * 15);
-          const jitter = 42 * (1 - sig * .45);
+          const pts = [a], segments = 10 + Math.floor(sig * 15), jitter = 42 * (1 - sig * .45);
           for (let i = 1; i < segments; i++) {
             const t = i / segments;
-            pts.push({
-              x: a.x + (b.x - a.x) * t + (Math.random() - .5) * jitter,
-              y: a.y + (b.y - a.y) * t + (Math.random() - .5) * jitter,
-            });
+            pts.push({ x: a.x + (b.x - a.x) * t + (Math.random() - .5) * jitter, y: a.y + (b.y - a.y) * t + (Math.random() - .5) * jitter });
           }
           pts.push(b);
-          ctx.save();
-          ctx.beginPath();
-          ctx.moveTo(pts[0].x, pts[0].y);
+          ctx.save(); ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
           pts.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
-          ctx.strokeStyle = color;
-          ctx.globalAlpha = .38 + sig * .5 - layer * .08;
-          ctx.lineWidth = (layers - layer) * (1 + sig * 4);
-          ctx.shadowColor = color;
-          ctx.shadowBlur = 20;
-          ctx.stroke();
-          ctx.restore();
+          ctx.strokeStyle = color; ctx.globalAlpha = .38 + sig * .5 - layer * .08;
+          ctx.lineWidth = (layers - layer) * (1 + sig * 4); ctx.shadowColor = color; ctx.shadowBlur = 20;
+          ctx.stroke(); ctx.restore();
         }
       }
-
       function halo(p, color, sig) {
         const rad = 16 + sig * 32;
         const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, rad);
-        g.addColorStop(0, color);
-        g.addColorStop(.35, color.replace("rgb", "rgba").replace(")", ",.45)"));
-        g.addColorStop(1, "rgba(0,0,0,0)");
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, rad, 0, Math.PI * 2);
-        ctx.fill();
+        g.addColorStop(0, color); g.addColorStop(.35, color.replace("rgb","rgba").replace(")", ",.45)")); g.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, rad, 0, Math.PI * 2); ctx.fill();
       }
-
       function spawnSparks(x, y, sig, color) {
         for (let i = 0; i < 4 + sig * 8; i++) {
-          const a = Math.random() * Math.PI * 2;
-          const speed = 1 + Math.random() * 5 * sig;
+          const a = Math.random() * Math.PI * 2, speed = 1 + Math.random() * 5 * sig;
           sparks.push({ x, y, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, life: 1, color });
         }
       }
-
       function updateSparks() {
         for (let i = sparks.length - 1; i >= 0; i--) {
-          const s = sparks[i];
-          s.x += s.vx;
-          s.y += s.vy;
-          s.vy += .12;
-          s.life -= .055;
-          if (s.life <= 0) {
-            sparks.splice(i, 1);
-            continue;
-          }
-          ctx.save();
-          ctx.globalAlpha = s.life;
-          ctx.fillStyle = s.color;
-          ctx.shadowColor = s.color;
-          ctx.shadowBlur = 10;
-          ctx.beginPath();
-          ctx.arc(s.x, s.y, 2, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.restore();
+          const s = sparks[i]; s.x += s.vx; s.y += s.vy; s.vy += .12; s.life -= .055;
+          if (s.life <= 0) { sparks.splice(i, 1); continue; }
+          ctx.save(); ctx.globalAlpha = s.life; ctx.fillStyle = s.color;
+          ctx.shadowColor = s.color; ctx.shadowBlur = 10;
+          ctx.beginPath(); ctx.arc(s.x, s.y, 2, 0, Math.PI * 2); ctx.fill(); ctx.restore();
         }
       }
-
       return { init, onCameraReady, stop };
     }
 
     function createTorch() {
-      let rafId = null;
-      let wasOn = false;
+      let rafId = null, wasOn = false;
       const clickOpen = new Audio("assets/sfx/clickopen.wav");
       const clickClose = new Audio("assets/sfx/clickclose.wav");
-
-      function init() {
-        wasOn = false;
-      }
-
-      function onCameraReady() {
-        if (rafId) cancelAnimationFrame(rafId);
-        loop();
-      }
-
-      function stop() {
-        if (rafId) cancelAnimationFrame(rafId);
-        rafId = null;
-        if (wasOn) playAudio(clickClose);
-        wasOn = false;
-      }
-
+      function init() { wasOn = false; }
+      function onCameraReady() { if (rafId) cancelAnimationFrame(rafId); loop(); }
+      function stop() { if (rafId) cancelAnimationFrame(rafId); rafId = null; if (wasOn) playAudio(clickClose); wasOn = false; }
       function loop() {
         rafId = requestAnimationFrame(loop);
-        drawWebcamTo(ctx, 0.88); 
-        
+        drawWebcamTo(ctx, 0.88);
         const hand = globalHandsData[0] || null;
         const on = !!hand && !handClosed(hand);
         if (on) drawBeam(hand);
@@ -995,545 +767,239 @@ splashView.addEventListener("mousemove", (e) => {
         wasOn = on;
         statusEl.textContent = on ? "torch on" : "open your hand to turn the torch on";
       }
-
       function drawBeam(hand) {
-        const tip = point(hand[8]);
-        const wrist = point(hand[0]);
-        let dx = tip.x - wrist.x;
-        let dy = tip.y - wrist.y;
-        const mag = Math.hypot(dx, dy) || 1;
-        dx /= mag;
-        dy /= mag;
+        const tip = point(hand[8]), wrist = point(hand[0]);
+        let dx = tip.x - wrist.x, dy = tip.y - wrist.y;
+        const mag = Math.hypot(dx, dy) || 1; dx /= mag; dy /= mag;
         const end = { x: tip.x + dx * 1500, y: tip.y + dy * 1500 };
         const perp = { x: -dy, y: dx };
-        const base = 8;
-        const spread = 210;
+        const base = 8, spread = 210;
         const poly = [
           { x: tip.x - perp.x * base, y: tip.y - perp.y * base },
           { x: tip.x + perp.x * base, y: tip.y + perp.y * base },
           { x: end.x + perp.x * spread, y: end.y + perp.y * spread },
           { x: end.x - perp.x * spread, y: end.y - perp.y * spread },
         ];
-
         ctx.save();
-        ctx.beginPath();
-        poly.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y));
-        ctx.closePath();
-        ctx.clip();
-        ctx.scale(-1, 1);
-        ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+        ctx.beginPath(); poly.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y));
+        ctx.closePath(); ctx.clip();
+        ctx.scale(-1, 1); ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
         ctx.restore();
-
         ctx.save();
-        ctx.beginPath();
-        poly.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y));
-        ctx.closePath();
-        ctx.fillStyle = "rgba(0,255,255,.22)";
-        ctx.shadowColor = "rgba(0,255,255,.75)";
-        ctx.shadowBlur = 30;
-        ctx.fill();
+        ctx.beginPath(); poly.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y));
+        ctx.closePath(); ctx.fillStyle = "rgba(0,255,255,.22)"; ctx.shadowColor = "rgba(0,255,255,.75)"; ctx.shadowBlur = 30; ctx.fill();
         ctx.restore();
-
-        ctx.save();
-        ctx.fillStyle = "#00ffff";
-        ctx.shadowColor = "#00ffff";
-        ctx.shadowBlur = 20;
-        ctx.beginPath();
-        ctx.arc(tip.x, tip.y, 10, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
+        ctx.save(); ctx.fillStyle = "#00ffff"; ctx.shadowColor = "#00ffff"; ctx.shadowBlur = 20;
+        ctx.beginPath(); ctx.arc(tip.x, tip.y, 10, 0, Math.PI * 2); ctx.fill(); ctx.restore();
       }
-
       return { init, onCameraReady, stop };
     }
 
     function createPiano() {
-      let rafId = null;
-      let lastPlayed = {};
+      let rafId = null, lastPlayed = {};
       const tips = [4, 8, 12, 16, 20];
       const joints = [3, 6, 10, 14, 18];
       const noteList = [
-        { label: "DO", file: "do.wav", color: "#ff5a5a" },
-        { label: "RE", file: "re.wav", color: "#ffb347" },
-        { label: "MI", file: "mi.wav", color: "#fff25a" },
-        { label: "FA", file: "fa.wav", color: "#68ff68" },
+        { label: "DO",  file: "do.wav",  color: "#ff5a5a" },
+        { label: "RE",  file: "re.wav",  color: "#ffb347" },
+        { label: "MI",  file: "mi.wav",  color: "#fff25a" },
+        { label: "FA",  file: "fa.wav",  color: "#68ff68" },
         { label: "SOL", file: "sol.wav", color: "#54fff6" },
-        { label: "LA", file: "la.wav", color: "#7192ff" },
-        { label: "SI", file: "si.wav", color: "#ff69f2" },
+        { label: "LA",  file: "la.wav",  color: "#7192ff" },
+        { label: "SI",  file: "si.wav",  color: "#ff69f2" },
         { label: "DO+", file: "do2.wav", color: "#ff9eca" },
-        { label: "RE+", file: "re.wav", rate: 2, color: "#c7ff64" },
-        { label: "MI+", file: "mi.wav", rate: 2, color: "#ffffff" },
+        { label: "RE+", file: "re.wav",  rate: 2, color: "#c7ff64" },
+        { label: "MI+", file: "mi.wav",  rate: 2, color: "#ffffff" },
       ];
-
-      function init() {
-        lastPlayed = {};
-      }
-
-      function onCameraReady() {
-        if (rafId) cancelAnimationFrame(rafId);
-        loop();
-      }
-
-      function stop() {
-        if (rafId) cancelAnimationFrame(rafId);
-        rafId = null;
-      }
-
+      function init() { lastPlayed = {}; }
+      function onCameraReady() { if (rafId) cancelAnimationFrame(rafId); loop(); }
+      function stop() { if (rafId) cancelAnimationFrame(rafId); rafId = null; }
       function loop() {
         rafId = requestAnimationFrame(loop);
         drawWebcamTo(ctx, 0);
-        
         if (!globalHandsData.length) lastPlayed = {};
-
         globalHandsData.forEach((hand, handIndex) => {
           tips.forEach((tipIndex, fingerIndex) => {
             const note = noteList[handIndex * 5 + fingerIndex];
             const stateKey = `${handIndex}-${fingerIndex}`;
             const active = fingerUp(hand, fingerIndex);
             const tip = point(hand[tipIndex]);
-            if (active) {
-              drawGlow(tip, note);
-              if (!lastPlayed[stateKey]) playNote(note);
-            }
+            if (active) { drawGlow(tip, note); if (!lastPlayed[stateKey]) playNote(note); }
             lastPlayed[stateKey] = active;
           });
         });
         statusEl.textContent = globalHandsData.length ? "play by raising fingers" : "show one or two hands";
       }
-
       function fingerUp(hand, fingerIndex) {
-        if (fingerIndex === 0) {
-          const tip = hand[4];
-          const joint = hand[3];
-          const wrist = hand[0];
-          return Math.abs(tip.x - wrist.x) > Math.abs(joint.x - wrist.x) + .025;
-        }
+        if (fingerIndex === 0) { const tip = hand[4], joint = hand[3], wrist = hand[0]; return Math.abs(tip.x - wrist.x) > Math.abs(joint.x - wrist.x) + .025; }
         return hand[tips[fingerIndex]].y < hand[joints[fingerIndex]].y - .018;
       }
-
-      function playNote(note) {
-        const audio = new Audio(`assets/notes/${note.file}`);
-        audio.playbackRate = note.rate || 1;
-        audio.currentTime = 0;
-        audio.play().catch(() => {});
-      }
-
+      function playNote(note) { const audio = new Audio(`assets/notes/${note.file}`); audio.playbackRate = note.rate || 1; audio.currentTime = 0; audio.play().catch(() => {}); }
       function drawGlow(tip, note) {
         const glow = ctx.createRadialGradient(tip.x, tip.y, 0, tip.x, tip.y, 46);
-        glow.addColorStop(0, note.color);
-        glow.addColorStop(.35, note.color + "cc");
-        glow.addColorStop(1, "rgba(0,0,0,0)");
-        ctx.save();
-        ctx.globalCompositeOperation = "screen";
-        ctx.fillStyle = glow;
-        ctx.beginPath();
-        ctx.arc(tip.x, tip.y, 46, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = note.color;
-        ctx.shadowColor = note.color;
-        ctx.shadowBlur = 16;
-        ctx.beginPath();
-        ctx.arc(tip.x, tip.y, 8, 0, Math.PI * 2);
-        ctx.fill();
-        
-        ctx.font = "700 18px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText(note.label, tip.x, tip.y - 35);
+        glow.addColorStop(0, note.color); glow.addColorStop(.35, note.color + "cc"); glow.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.save(); ctx.globalCompositeOperation = "screen"; ctx.fillStyle = glow;
+        ctx.beginPath(); ctx.arc(tip.x, tip.y, 46, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = note.color; ctx.shadowColor = note.color; ctx.shadowBlur = 16;
+        ctx.beginPath(); ctx.arc(tip.x, tip.y, 8, 0, Math.PI * 2); ctx.fill();
+        ctx.font = "700 18px Arial"; ctx.textAlign = "center"; ctx.fillText(note.label, tip.x, tip.y - 35);
         ctx.restore();
       }
-
       return { init, onCameraReady, stop };
     }
 
-    function createFaceFilter(kind) {
-      let rafId = null;
-      let frame = 0;
-      let butterfly = { x: canvas.width / 2, y: canvas.height + 80, attached: false };
-      let butterflyImg = new Image();
-      butterflyImg.src = "assets/img/butterfly.png";
-
-      function init() {
-        frame = 0;
-        butterfly = { x: canvas.width / 2, y: canvas.height + 80, attached: false };
-      }
-
-      function onCameraReady() {
-        if (rafId) cancelAnimationFrame(rafId);
-        loop();
-      }
-
-      function stop() {
-        if (rafId) cancelAnimationFrame(rafId);
-        rafId = null;
-      }
-
-      function loop() {
-        rafId = requestAnimationFrame(loop);
-        frame++;
-        drawWebcamTo(ctx, 0);
-        
-        if (!globalFaceData) {
-          statusEl.textContent = "show your face";
-          return;
-        }
-        const box = faceBox(globalFaceData);
-        if (kind === "butterfly") drawButterfly(box);
-        statusEl.textContent = `${kind} active`;
-      }
-
-      function drawButterfly(box) {
-        if (!butterfly.attached) {
-          const dx = box.cx - butterfly.x;
-          const dy = box.cy - butterfly.y;
-          butterfly.x += dx * .18;
-          butterfly.y += dy * .18;
-          if (Math.hypot(dx, dy) < 12) butterfly.attached = true;
-        } else {
-          butterfly.x += (box.cx - butterfly.x) * .15;
-          butterfly.y += (box.cy - butterfly.y) * .15;
-        }
-        const floatX = Math.sin(frame * .04) * 16 + Math.sin(frame * .13) * 5;
-        const floatY = Math.cos(frame * .035) * 10;
-        const angle = Math.sin(frame * .05) * .22;
-        const w = box.rx * 2.8;
-        const h = box.ry * 1.35;
-        ctx.save();
-        ctx.translate(butterfly.x + floatX, butterfly.y + floatY);
-        ctx.rotate(angle);
-        ctx.globalAlpha = .96;
-        ctx.drawImage(butterflyImg, -w / 2, -h / 2, w, h);
-        ctx.restore();
-      }
-
-      return { init, onCameraReady, stop };
-    }
-
-    function createTelekinesis() {
-      let rafId = null;
-      let ballImg = new Image();
-      ballImg.src = "assets/img/ball.png";
-      const radius = 58;
-      const ball = { x: canvas.width / 2, y: canvas.height / 2, vx: 3, vy: 2, mode: "wander", lastX: null, lastY: null };
-
-      function init() {
-        ball.x = canvas.width / 2;
-        ball.y = canvas.height / 2;
-        ball.vx = 3;
-        ball.vy = 2;
-        ball.mode = "wander";
-        ball.lastX = null;
-        ball.lastY = null;
-      }
-
-      function onCameraReady() {
-        if (rafId) cancelAnimationFrame(rafId);
-        loop();
-      }
-
-      function stop() {
-        if (rafId) cancelAnimationFrame(rafId);
-        rafId = null;
-      }
-
-      function loop() {
-        rafId = requestAnimationFrame(loop);
-        drawWebcamTo(ctx, 0);
-        let pinching = false;
-        let center = null;
-        
-        const hand = globalHandsData[0] || null;
-        if (hand) {
-          pinching = pinchDistance(hand) < 48;
-          center = pinchCenter(hand);
-        }
-        updateBall(pinching, center);
-        drawBall();
-        statusEl.textContent = ball.mode === "grab" ? "grabbed" : "pinch on the ball to grab, release to throw";
-      }
-
-      function updateBall(pinching, center) {
-        const overBall = center && Math.hypot(center.x - ball.x, center.y - ball.y) < radius * 1.3;
-        if (pinching && center && (ball.mode === "grab" || overBall)) {
-          ball.mode = "grab";
-          if (ball.lastX !== null && ball.lastY !== null) {
-            ball.vx = center.x - ball.lastX;
-            ball.vy = center.y - ball.lastY;
-          }
-          ball.x = center.x;
-          ball.y = center.y;
-          ball.lastX = center.x;
-          ball.lastY = center.y;
-          return;
-        }
-        
-        if (ball.mode === "grab") {
-          ball.mode = "throw";
-          ball.vx *= 1.6; 
-          ball.vy *= 1.6;
-        }
-
-        ball.x += ball.vx;
-        ball.y += ball.vy;
-
-        if (ball.x < radius) { ball.x = radius; ball.vx *= -1; }
-        if (ball.x > canvas.width - radius) { ball.x = canvas.width - radius; ball.vx *= -1; }
-        if (ball.y < radius) { ball.y = radius; ball.vy *= -1; }
-        if (ball.y > canvas.height - radius) { ball.y = canvas.height - radius; ball.vy *= -1; }
-
-        if (ball.mode === "throw") {
-          ball.vx *= .985;
-          ball.vy *= .985;
-          if (Math.hypot(ball.vx, ball.vy) < 1.2) {
-            ball.mode = "wander";
-          }
-        } else if (ball.mode === "wander") {
-          if (Math.hypot(ball.vx, ball.vy) < 1.5) {
-            ball.vx = (Math.random() - .5) * 4;
-            ball.vy = (Math.random() - .5) * 4;
-          }
-        }
-        ball.lastX = null;
-        ball.lastY = null;
-      }
-
-      function drawBall() {
-        ctx.save();
-        ctx.shadowColor = "rgba(220,255,0,.65)";
-        ctx.shadowBlur = 20;
-        ctx.drawImage(ballImg, ball.x - radius, ball.y - radius, radius * 2, radius * 2);
-        ctx.restore();
-      }
-
-      return { init, onCameraReady, stop };
-    }
-
+    // ===================== SCAN EFFECT (with scanner.wav) =====================
     function createScanEffect() {
       let rafId = null;
-      let scanY = 0;
-      let scanning = false;
-      let scanDirection = 1;
-      let showSchema = false;
-      let lastPinch = false;
-      
+      let scanY = 0, scanning = false, scanDirection = 1, showSchema = false, lastPinch = false;
+
       const staticCanvas = document.createElement("canvas");
       const staticCtx = staticCanvas.getContext("2d");
-      staticCanvas.width = canvas.width;
-      staticCanvas.height = canvas.height;
+
+      // Scanner sound
+      const scannerSound = new Audio("assets/sfx/scanner.wav");
+      scannerSound.loop = true;
 
       function init() {
-        scanY = 0;
-        scanning = false;
-        scanDirection = 1;
-        showSchema = false;
-        lastPinch = false;
+        scanY = 0; scanning = false; scanDirection = 1; showSchema = false; lastPinch = false;
+        // Sync static canvas size to active canvas
+        staticCanvas.width = canvas.width;
+        staticCanvas.height = canvas.height;
       }
 
       function onCameraReady() {
+        // Re-sync canvas size in case mobile/desktop switched
+        staticCanvas.width = canvas.width;
+        staticCanvas.height = canvas.height;
         if (rafId) cancelAnimationFrame(rafId);
         loop();
       }
 
       function stop() {
-        if (rafId) cancelAnimationFrame(rafId);
-        rafId = null;
+        if (rafId) cancelAnimationFrame(rafId); rafId = null;
+        scannerSound.pause(); scannerSound.currentTime = 0;
       }
 
-      function getDistance3D(pt1, pt2) {
-        return Math.hypot(pt1.x - pt2.x, pt1.y - pt2.y, pt1.z - pt2.z);
-      }
+      function getDistance3D(pt1, pt2) { return Math.hypot(pt1.x - pt2.x, pt1.y - pt2.y, pt1.z - pt2.z); }
 
       function loop() {
         rafId = requestAnimationFrame(loop);
-        
         const hand = globalHandsData[0] || null;
         const currentPinch = hand ? (pinchDistance(hand) < 42) : false;
         const clickTriggered = currentPinch && !lastPinch;
         lastPinch = currentPinch;
 
         if (clickTriggered && !scanning) {
+          // Sync static canvas to current active canvas size
+          staticCanvas.width = canvas.width;
+          staticCanvas.height = canvas.height;
           drawWebcamTo(staticCtx, 0);
           scanning = true;
           scanY = 0;
           scanDirection = 1;
           showSchema = false;
+          // Play scanner sound
+          scannerSound.currentTime = 0;
+          scannerSound.play().catch(() => {});
         }
 
         if (!scanning && !showSchema) {
           drawWebcamTo(ctx, 0);
-          ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
-          ctx.font = "18px Arial";
+          ctx.fillStyle = "rgba(255,255,255,0.85)";
+          ctx.font = `${Math.max(12, canvas.width * 0.018)}px Arial`;
           ctx.textAlign = "center";
-          ctx.fillText("Fai Click (Pinch Indice-Pollice) per avviare lo scan", canvas.width / 2, canvas.height / 2);
+          ctx.fillText("Pinch (Thumb + Index) to start scan", canvas.width / 2, canvas.height / 2);
         } else if (scanning) {
-          ctx.drawImage(staticCanvas, 0, 0);
-          
+          ctx.drawImage(staticCanvas, 0, 0, canvas.width, canvas.height);
           ctx.save();
-          ctx.strokeStyle = "#00ff55";
-          ctx.lineWidth = 6;
-          ctx.shadowColor = "#00ff55";
-          ctx.shadowBlur = 25;
-          ctx.beginPath();
-          ctx.moveTo(0, scanY);
-          ctx.lineTo(canvas.width, scanY);
-          ctx.stroke();
+          ctx.strokeStyle = "#00ff55"; ctx.lineWidth = 6;
+          ctx.shadowColor = "#00ff55"; ctx.shadowBlur = 25;
+          ctx.beginPath(); ctx.moveTo(0, scanY); ctx.lineTo(canvas.width, scanY); ctx.stroke();
           ctx.restore();
-
-          if (scanDirection === 1) {
-            scanY += 16;
-            if (scanY >= canvas.height) {
-              scanDirection = -1;
-            }
-          } else {
-            scanY -= 16;
-            if (scanY <= 0) {
-              scanning = false;
-              showSchema = true;
-            }
-          }
+          const speed = Math.max(8, canvas.height / 60);
+          if (scanDirection === 1) { scanY += speed; if (scanY >= canvas.height) { scanDirection = -1; } }
+          else { scanY -= speed; if (scanY <= 0) { scanning = false; showSchema = true; scannerSound.pause(); scannerSound.currentTime = 0; } }
         } else if (showSchema) {
           drawWebcamTo(ctx, 0);
-
           if (globalFaceData) {
             const mesh = globalFaceData;
             ctx.save();
-            ctx.strokeStyle = "rgba(0, 255, 85, 0.65)";
-            ctx.lineWidth = 1.2;
-            
-            const featureIndices = [
-              10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109,
-              33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160, 161, 246,
-              362, 382, 381, 380, 374, 373, 390, 249, 263, 466, 388, 387, 386, 385, 384, 398,
-              61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 409, 270, 269, 267, 0, 37, 39, 40, 185,
-              168, 6, 197, 195, 5, 4, 1, 19, 94, 2
-            ];
-
+            ctx.strokeStyle = "rgba(0,255,85,0.65)"; ctx.lineWidth = 1.2;
+            const featureIndices = [10,338,297,332,284,251,389,356,454,323,361,288,397,365,379,378,400,377,152,148,176,149,150,136,172,58,132,93,234,127,162,21,54,103,67,109,33,7,163,144,145,153,154,155,133,173,157,158,159,160,161,246,362,382,381,380,374,373,390,249,263,466,388,387,386,385,384,398,61,146,91,181,84,17,314,405,321,375,291,409,270,269,267,0,37,39,40,185,168,6,197,195,5,4,1,19,94,2];
             ctx.beginPath();
             featureIndices.forEach((idx, i) => {
               const p = point(mesh[idx]);
-              if (i % 6 === 0) ctx.moveTo(p.x, p.y);
-              else ctx.lineTo(p.x, p.y);
-              ctx.fillStyle = "rgba(0, 255, 85, 0.9)";
-              ctx.fillRect(p.x - 1.5, p.y - 1.5, 3, 3);
+              if (i % 6 === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+              ctx.fillStyle = "rgba(0,255,85,0.9)"; ctx.fillRect(p.x-1.5, p.y-1.5, 3, 3);
             });
-            ctx.stroke();
-            ctx.restore();
+            ctx.stroke(); ctx.restore();
 
             const leftEyeDist = getDistance3D(mesh[159], mesh[145]);
-            const leftEyeWidth = getDistance3D(mesh[33], mesh[133]);
-            const leftEAR = leftEyeDist / (leftEyeWidth || 1);
-
+            const leftEAR = leftEyeDist / (getDistance3D(mesh[33], mesh[133]) || 1);
             const rightEyeDist = getDistance3D(mesh[386], mesh[374]);
-            const rightEyeWidth = getDistance3D(mesh[362], mesh[263]);
-            const rightEAR = rightEyeDist / (rightEyeWidth || 1);
-
-            const leftOpen = leftEAR > 0.21;
-            const rightOpen = rightEAR > 0.21;
+            const rightEAR = rightEyeDist / (getDistance3D(mesh[362], mesh[263]) || 1);
+            const leftOpen = leftEAR > 0.21, rightOpen = rightEAR > 0.21;
             const isBlinking = !leftOpen && !rightOpen;
-
-            const mouthDist = getDistance3D(mesh[13], mesh[14]);
-            const mouthWidth = getDistance3D(mesh[78], mesh[308]);
-            const mouthRatio = mouthDist / (mouthWidth || 1);
+            const mouthRatio = getDistance3D(mesh[13], mesh[14]) / (getDistance3D(mesh[78], mesh[308]) || 1);
             const mouthOpen = mouthRatio > 0.15;
 
-            let zoomW = 140;   
-            let zoomH = 105;   
-            let boxContainerWidth = 310; 
-            let boxContainerHeight = 190; 
-            let uiY = 30; 
-            
-            let eyesContainerX = 15;
+            // Scale UI boxes to canvas size
+            const scale = canvas.width / 960;
+            const zoomW = Math.round(140 * scale), zoomH = Math.round(105 * scale);
+            const boxW = Math.round(310 * scale), boxH = Math.round(190 * scale);
+            const uiY = Math.round(30 * scale);
+            const eyesX = Math.round(15 * scale);
+
             ctx.save();
-            ctx.fillStyle = "rgba(0, 12, 4, 0.88)";
-            ctx.strokeStyle = "#00ff55";
-            ctx.lineWidth = 2.5;
-            ctx.fillRect(eyesContainerX, uiY, boxContainerWidth, boxContainerHeight);
-            ctx.strokeRect(eyesContainerX, uiY, boxContainerWidth, boxContainerHeight);
-            
+            ctx.fillStyle = "rgba(0,12,4,0.88)"; ctx.strokeStyle = "#00ff55"; ctx.lineWidth = 2.5;
+            ctx.fillRect(eyesX, uiY, boxW, boxH); ctx.strokeRect(eyesX, uiY, boxW, boxH);
             const pLeftEye = point(mesh[159]);
             const pRightEye = point(mesh[386]);
-            
-            let innerPaddingX = eyesContainerX + 10;
-            let innerPaddingY = uiY + 30;
-            ctx.strokeStyle = "#00ff55";
-            ctx.lineWidth = 1.5;
-            ctx.strokeRect(innerPaddingX, innerPaddingY, zoomW, zoomH);
+            const ipX = eyesX + Math.round(10*scale), ipY = uiY + Math.round(30*scale);
+            ctx.strokeStyle = "#00ff55"; ctx.lineWidth = 1.5;
+            ctx.strokeRect(ipX, ipY, zoomW, zoomH);
             ctx.save();
-            ctx.beginPath();
-            ctx.rect(innerPaddingX, innerPaddingY, zoomW, zoomH);
-            ctx.clip();
+            ctx.beginPath(); ctx.rect(ipX, ipY, zoomW, zoomH); ctx.clip();
             ctx.scale(-1, 1);
-            ctx.drawImage(video, video.videoWidth - (pLeftEye.x * (video.videoWidth / canvas.width)) - 50, (pLeftEye.y * (video.videoHeight / canvas.height)) - 40, 100, 80, -innerPaddingX - zoomW, innerPaddingY, zoomW, zoomH);
+            ctx.drawImage(video, video.videoWidth - (pLeftEye.x * (video.videoWidth / canvas.width)) - 50, (pLeftEye.y * (video.videoHeight / canvas.height)) - 40, 100, 80, -ipX - zoomW, ipY, zoomW, zoomH);
             ctx.restore();
-            
-            ctx.strokeRect(innerPaddingX + zoomW + 10, innerPaddingY, zoomW, zoomH);
+            ctx.strokeRect(ipX + zoomW + Math.round(10*scale), ipY, zoomW, zoomH);
             ctx.save();
-            ctx.beginPath();
-            ctx.rect(innerPaddingX + zoomW + 10, innerPaddingY, zoomW, zoomH);
-            ctx.clip();
+            ctx.beginPath(); ctx.rect(ipX + zoomW + Math.round(10*scale), ipY, zoomW, zoomH); ctx.clip();
             ctx.scale(-1, 1);
-            ctx.drawImage(video, video.videoWidth - (pRightEye.x * (video.videoWidth / canvas.width)) - 50, (pRightEye.y * (video.videoHeight / canvas.height)) - 40, 100, 80, -(innerPaddingX + zoomW + 10) - zoomW, innerPaddingY, zoomW, zoomH);
+            ctx.drawImage(video, video.videoWidth - (pRightEye.x * (video.videoWidth / canvas.width)) - 50, (pRightEye.y * (video.videoHeight / canvas.height)) - 40, 100, 80, -(ipX + zoomW + Math.round(10*scale)) - zoomW, ipY, zoomW, zoomH);
             ctx.restore();
-            
-            ctx.fillStyle = "#00ff55";
-            ctx.font = "bold 14px monospace";
-            ctx.textAlign = "center";
-            ctx.fillText(`L-EYE: ${leftOpen ? "OPEN" : "CLOSE"}`, innerPaddingX + (zoomW / 2), innerPaddingY + zoomH + 24);
-            ctx.fillText(`R-EYE: ${rightOpen ? "OPEN" : "CLOSE"}`, innerPaddingX + zoomW + 10 + (zoomW / 2), innerPaddingY + zoomH + 24);
+            ctx.fillStyle = "#00ff55"; ctx.font = `bold ${Math.round(14*scale)}px monospace`; ctx.textAlign = "center";
+            ctx.fillText(`L-EYE: ${leftOpen?"OPEN":"CLOSE"}`, ipX + zoomW/2, ipY + zoomH + Math.round(24*scale));
+            ctx.fillText(`R-EYE: ${rightOpen?"OPEN":"CLOSE"}`, ipX + zoomW + Math.round(10*scale) + zoomW/2, ipY + zoomH + Math.round(24*scale));
             ctx.restore();
 
-            let uiX = canvas.width - boxContainerWidth - 15;
+            const uiX = canvas.width - boxW - Math.round(15*scale);
             ctx.save();
-            ctx.fillStyle = "rgba(0, 12, 4, 0.88)";
-            ctx.strokeStyle = "#00ff55";
-            ctx.lineWidth = 2.5;
-            ctx.fillRect(uiX, uiY, boxContainerWidth, boxContainerHeight);
-            ctx.strokeRect(uiX, uiY, boxContainerWidth, boxContainerHeight);
-
-            ctx.fillStyle = "#00ff55";
-            ctx.font = "bold 16px monospace";
-            ctx.textAlign = "left";
-            ctx.fillText("[- FACE ANALYSIS LOG -]", uiX + 15, uiY + 30);
-            ctx.font = "bold 14px monospace";
-            ctx.fillText(`EYE BLINK  => ${isBlinking ? "YES" : "NO"}`, uiX + 15, uiY + 70);
-            ctx.fillText(`MOUTH OPEN => ${mouthOpen ? "YES" : "NO"}`, uiX + 15, uiY + 105);
-            ctx.fillText(`SYS MATRIX => STABLE`, uiX + 15, uiY + 140);
+            ctx.fillStyle = "rgba(0,12,4,0.88)"; ctx.strokeStyle = "#00ff55"; ctx.lineWidth = 2.5;
+            ctx.fillRect(uiX, uiY, boxW, boxH); ctx.strokeRect(uiX, uiY, boxW, boxH);
+            ctx.fillStyle = "#00ff55"; ctx.font = `bold ${Math.round(16*scale)}px monospace`; ctx.textAlign = "left";
+            ctx.fillText("[- FACE ANALYSIS LOG -]", uiX + Math.round(15*scale), uiY + Math.round(30*scale));
+            ctx.font = `bold ${Math.round(14*scale)}px monospace`;
+            ctx.fillText(`EYE BLINK  => ${isBlinking?"YES":"NO"}`,  uiX + Math.round(15*scale), uiY + Math.round(70*scale));
+            ctx.fillText(`MOUTH OPEN => ${mouthOpen?"YES":"NO"}`,   uiX + Math.round(15*scale), uiY + Math.round(105*scale));
+            ctx.fillText(`SYS MATRIX => STABLE`,                     uiX + Math.round(15*scale), uiY + Math.round(140*scale));
             ctx.fillStyle = "rgba(0,255,85,0.6)";
-            ctx.fillText(`TRACK CONF => 99.18%`, uiX + 15, uiY + 170);
+            ctx.fillText(`TRACK CONF => 99.18%`,                     uiX + Math.round(15*scale), uiY + Math.round(170*scale));
             ctx.restore();
           }
 
           if (globalHandsData.length > 0) {
             globalHandsData.forEach(hand => {
               ctx.save();
-              ctx.strokeStyle = "#00ff55";
-              ctx.fillStyle = "#00ff55";
-              ctx.lineWidth = 2.5;
-              ctx.shadowColor = "#00ff55";
-              ctx.shadowBlur = 8;
-              
-              const connections = [
-                [0,1], [1,2], [2,3], [3,4],
-                [0,5], [5,6], [6,7], [7,8],
-                [5,9], [9,10], [10,11], [11,12],
-                [9,13], [13,14], [14,15], [15,16],
-                [0,17], [17,18], [18,19], [19,20], [13,17]
-              ];
-              
-              connections.forEach(([start, end]) => {
-                const pStart = point(hand[start]);
-                const pEnd = point(hand[end]);
-                ctx.beginPath();
-                ctx.moveTo(pStart.x, pStart.y);
-                ctx.lineTo(pEnd.x, pEnd.y);
-                ctx.stroke();
+              ctx.strokeStyle = "#00ff55"; ctx.fillStyle = "#00ff55"; ctx.lineWidth = 2.5;
+              ctx.shadowColor = "#00ff55"; ctx.shadowBlur = 8;
+              const connections = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[0,17],[17,18],[18,19],[19,20],[13,17]];
+              connections.forEach(([s, e]) => {
+                const pS = point(hand[s]), pE = point(hand[e]);
+                ctx.beginPath(); ctx.moveTo(pS.x, pS.y); ctx.lineTo(pE.x, pE.y); ctx.stroke();
               });
-
-              hand.forEach(lm => {
-                const p = point(lm);
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
-                ctx.fill();
-              });
+              hand.forEach(lm => { const p = point(lm); ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI*2); ctx.fill(); });
               ctx.restore();
             });
           }
@@ -1543,242 +1009,207 @@ splashView.addEventListener("mousemove", (e) => {
           const tip = point(hand[8]);
           ctx.save();
           ctx.fillStyle = currentPinch ? "#00ff55" : "#00ffff";
-          ctx.shadowColor = currentPinch ? "#00ff55" : "#00ffff";
-          ctx.shadowBlur = 10;
-          ctx.beginPath();
-          ctx.arc(tip.x, tip.y, currentPinch ? 14 : 8, 0, Math.PI * 2);
-          ctx.fill();
+          ctx.shadowColor = currentPinch ? "#00ff55" : "#00ffff"; ctx.shadowBlur = 10;
+          ctx.beginPath(); ctx.arc(tip.x, tip.y, currentPinch ? 14 : 8, 0, Math.PI*2); ctx.fill();
           ctx.restore();
         }
-        
         statusEl.textContent = scanning ? "Scanning..." : (showSchema ? "Analysis complete" : "System Ready");
       }
-
-      return { init, onCameraReady, stop };
-    }
-
-    // --- X-RAY FRAME ---
-    function createGlitchFrame() { 
-      let rafId = null;
-
-      function init() {}
-
-      function onCameraReady() {
-        if (rafId) cancelAnimationFrame(rafId);
-        loop();
-      }
-
-      function stop() {
-        if (rafId) cancelAnimationFrame(rafId);
-        rafId = null;
-      }
-
-      function loop() {
-        rafId = requestAnimationFrame(loop);
-        drawWebcamTo(ctx, 0);
-
-        if (globalHandsData.length >= 2) {
-          const p1 = point(globalHandsData[0][8]);
-          const p2 = point(globalHandsData[1][8]);
-
-          const x = Math.min(p1.x, p2.x);
-          const y = Math.min(p1.y, p2.y);
-          const w = Math.abs(p1.x - p2.x);
-          const h = Math.abs(p1.y - p2.y);
-
-          if (w > 15 && h > 15) {
-            ctx.save();
-
-            // 1. Grab the region pixels
-const imgData = ctx.getImageData(x, y, Math.floor(w), Math.floor(h));
-const d = imgData.data;
-
-// 2. X-Ray GREEN BASE + visible face (no heavy tint)
-for (let i = 0; i < d.length; i += 4) {
-
-  const r = d[i];
-  const g = d[i + 1];
-  const b = d[i + 2];
-
-  const lum = r * 0.2126 + g * 0.7152 + b * 0.0722;
-
-  // contrast leggero (NON distrugge i dettagli del volto)
-  const c = clamp((lum - 128) * 1.2 + 128, 0, 255);
-
-  // 🎯 base verde + trasparenza della pelle
-  d[i]     = c * 0.15;  // rosso quasi spento
-  d[i + 1] = c * 1.05;  // verde dominante (X-ray)
-  d[i + 2] = c * 0.25;  // blu leggero per profondità
-}
-
-ctx.putImageData(imgData, x, y);
-            ctx.putImageData(imgData, x, y);
-
-            // 3. Scan line overlay for that X-ray machine feel
-            const t = Date.now() * 0.003;
-
-for (let row = 0; row < h; row += 5) {
-  const alpha = 0.03 + 0.03 * Math.sin(row * 0.2 + t);
-
-  ctx.fillStyle = `rgba(0, 255, 80, ${alpha})`;
-  ctx.fillRect(x, y + row, w, 1.5);
-}
-
-            // 4. Moving scan line (bright sweep)
-            const sweep = ((t * 60) % (h + 20)) - 10;
-
-const sweepGrad = ctx.createLinearGradient(
-  0, y + sweep - 8,
-  0, y + sweep + 8
-);
-
-sweepGrad.addColorStop(0, "rgba(0,0,0,0)");
-sweepGrad.addColorStop(0.5, "rgba(255,0,60,0.25)");
-sweepGrad.addColorStop(1, "rgba(0,0,0,0)");
-
-            ctx.fillStyle = sweepGrad;
-ctx.fillRect(x, y + sweep - 8, w, 14);
-
-            // 5. Neon border
-            ctx.strokeStyle = "rgba(0,255,90,0.8)";
-            ctx.lineWidth = 2.5;
-            ctx.shadowColor = "rgba(255,0,60,0.5)";
-            ctx.shadowBlur = 14;
-            ctx.strokeRect(x, y, w, h);
-
-            // 6. Corner brackets
-            const bLen = 18;
-            ctx.lineWidth = 3;
-            [
-              [x, y, bLen, 0, 0, bLen],
-              [x + w, y, -bLen, 0, 0, bLen],
-              [x, y + h, bLen, 0, 0, -bLen],
-              [x + w, y + h, -bLen, 0, 0, -bLen],
-            ].forEach(([cx, cy, dx1, dy1, dx2, dy2]) => {
-              ctx.beginPath();
-              ctx.moveTo(cx + dx1, cy + dy1);
-              ctx.lineTo(cx, cy);
-              ctx.lineTo(cx + dx2, cy + dy2);
-              ctx.stroke();
-            });
-
-            ctx.restore();
-          }
-
-          drawFingerIndicatorXray(p1);
-          drawFingerIndicatorXray(p2);
-          statusEl.textContent = "X-Ray Frame active — move hands to resize the scan area";
-        } else {
-          statusEl.textContent = "Show both index fingers to activate the X-ray scan";
-        }
-      }
-
-      function drawFingerIndicatorXray(p) {
-        ctx.save();
-        ctx.fillStyle = "rgba(0,220,255,0.25)";
-        ctx.strokeStyle = "#00e5ff";
-        ctx.lineWidth = 2;
-        ctx.shadowColor = "#00e5ff";
-        ctx.shadowBlur = 16;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 10, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        ctx.restore();
-      }
-
       return { init, onCameraReady, stop };
     }
 
     function createDice() {
-      let rafId = null;
-      let closedWas = false;
-      let visible = true;
-      let current = 0;
-      let angle = 0;
-      let shakeFrames = 0;
-      const diceImages = [1, 2, 3, 4, 5, 6].map(n => {
-        const img = new Image();
-        img.src = `assets/dice/dado${n}.png`;
-        return img;
-      });
+      let rafId = null, closedWas = false, visible = true, current = 0, angle = 0, shakeFrames = 0;
+      const diceImages = [1,2,3,4,5,6].map(n => { const img = new Image(); img.src = `assets/dice/dado${n}.png`; return img; });
       const shakeSound = new Audio("assets/sfx/scuotere.wav");
       const rollSound = new Audio("assets/sfx/rolling.wav");
       shakeSound.loop = true;
-
-      function init() {
-        closedWas = false;
-        visible = true;
-        current = Math.floor(Math.random() * 6);
-        angle = 0;
-        shakeFrames = 0;
-      }
-
-      function onCameraReady() {
-        if (rafId) cancelAnimationFrame(rafId);
-        loop();
-      }
-
-      function stop() {
-        if (rafId) cancelAnimationFrame(rafId);
-        rafId = null;
-        shakeSound.pause();
-        shakeSound.currentTime = 0;
-      }
-
+      function init() { closedWas = false; visible = true; current = Math.floor(Math.random()*6); angle = 0; shakeFrames = 0; }
+      function onCameraReady() { if (rafId) cancelAnimationFrame(rafId); loop(); }
+      function stop() { if (rafId) cancelAnimationFrame(rafId); rafId = null; shakeSound.pause(); shakeSound.currentTime = 0; }
       function loop() {
         rafId = requestAnimationFrame(loop);
         drawWebcamTo(ctx, 0);
-        
         const hand = globalHandsData[0] || null;
         const closed = !!hand && handClosed(hand);
-        if (closed && !closedWas) {
-          visible = false;
-          playAudio(shakeSound);
-        }
+        if (closed && !closedWas) { visible = false; playAudio(shakeSound); }
         if (!closed && closedWas) {
-          visible = true;
-          shakeSound.pause();
-          shakeSound.currentTime = 0;
-          playAudio(rollSound);
-          let next = current;
-          while (next === current) next = Math.floor(Math.random() * 6);
-          current = next;
-          angle = Math.random() * Math.PI * 2;
-          shakeFrames = 18;
+          visible = true; shakeSound.pause(); shakeSound.currentTime = 0; playAudio(rollSound);
+          let next = current; while (next === current) next = Math.floor(Math.random()*6);
+          current = next; angle = Math.random() * Math.PI * 2; shakeFrames = 18;
         }
         closedWas = closed;
         if (visible) drawDie();
         statusEl.textContent = closed ? "shaking..." : "open hand shows the new die";
       }
-
       function drawDie() {
         const img = diceImages[current];
         const size = Math.min(canvas.width, canvas.height) * .34;
-        const cx = (canvas.width * 0.73) + (shakeFrames ? (Math.random() - .5) * 12 : 0);
-        const cy = canvas.height / 2 + (shakeFrames ? (Math.random() - .5) * 12 : 0);
+        const cx = (canvas.width * 0.73) + (shakeFrames ? (Math.random()-.5)*12 : 0);
+        const cy = canvas.height / 2 + (shakeFrames ? (Math.random()-.5)*12 : 0);
         if (shakeFrames > 0) shakeFrames--;
         ctx.save();
-        ctx.translate(cx, cy);
-        ctx.rotate(angle);
-        ctx.shadowColor = "rgba(255,255,255,.45)";
-        ctx.shadowBlur = 24;
-        ctx.drawImage(img, -size / 2, -size / 2, size, size);
+        ctx.translate(cx, cy); ctx.rotate(angle);
+        ctx.shadowColor = "rgba(255,255,255,.45)"; ctx.shadowBlur = 24;
+        ctx.drawImage(img, -size/2, -size/2, size, size);
         ctx.restore();
       }
-
       return { init, onCameraReady, stop };
     }
 
+    function createFaceFilter(kind) {
+      let rafId = null, frame = 0;
+      let butterfly = { x: 0, y: 0, attached: false };
+      let butterflyImg = new Image();
+      butterflyImg.src = "assets/img/butterfly.png";
+      function init() { frame = 0; butterfly = { x: canvas.width/2, y: canvas.height+80, attached: false }; }
+      function onCameraReady() { if (rafId) cancelAnimationFrame(rafId); loop(); }
+      function stop() { if (rafId) cancelAnimationFrame(rafId); rafId = null; }
+      function loop() {
+        rafId = requestAnimationFrame(loop);
+        frame++;
+        drawWebcamTo(ctx, 0);
+        if (!globalFaceData) { statusEl.textContent = "show your face"; return; }
+        const box = faceBox(globalFaceData);
+        if (kind === "butterfly") drawButterfly(box);
+        statusEl.textContent = `${kind} active`;
+      }
+      function drawButterfly(box) {
+        if (!butterfly.attached) {
+          const dx = box.cx - butterfly.x, dy = box.cy - butterfly.y;
+          butterfly.x += dx * .18; butterfly.y += dy * .18;
+          if (Math.hypot(dx, dy) < 12) butterfly.attached = true;
+        } else {
+          butterfly.x += (box.cx - butterfly.x) * .15;
+          butterfly.y += (box.cy - butterfly.y) * .15;
+        }
+        const floatX = Math.sin(frame*.04)*16 + Math.sin(frame*.13)*5;
+        const floatY = Math.cos(frame*.035)*10;
+        const angleB = Math.sin(frame*.05)*.22;
+        const w = box.rx*2.8, h = box.ry*1.35;
+        ctx.save();
+        ctx.translate(butterfly.x+floatX, butterfly.y+floatY); ctx.rotate(angleB); ctx.globalAlpha = .96;
+        ctx.drawImage(butterflyImg, -w/2, -h/2, w, h);
+        ctx.restore();
+      }
+      return { init, onCameraReady, stop };
+    }
+
+    function createGlitchFrame() {
+      let rafId = null;
+      function init() {}
+      function onCameraReady() { if (rafId) cancelAnimationFrame(rafId); loop(); }
+      function stop() { if (rafId) cancelAnimationFrame(rafId); rafId = null; }
+      function loop() {
+        rafId = requestAnimationFrame(loop);
+        drawWebcamTo(ctx, 0);
+        if (globalHandsData.length >= 2) {
+          const p1 = point(globalHandsData[0][8]), p2 = point(globalHandsData[1][8]);
+          const x = Math.min(p1.x, p2.x), y = Math.min(p1.y, p2.y);
+          const w = Math.abs(p1.x - p2.x), h = Math.abs(p1.y - p2.y);
+          if (w > 15 && h > 15) {
+            ctx.save();
+            const imgData = ctx.getImageData(x, y, Math.floor(w), Math.floor(h));
+            const d = imgData.data;
+            for (let i = 0; i < d.length; i += 4) {
+              const lum = d[i]*0.2126 + d[i+1]*0.7152 + d[i+2]*0.0722;
+              const c = clamp((lum-128)*1.2+128, 0, 255);
+              d[i] = c*0.15; d[i+1] = c*1.05; d[i+2] = c*0.25;
+            }
+            ctx.putImageData(imgData, x, y);
+            const t = Date.now() * 0.003;
+            for (let row = 0; row < h; row += 5) {
+              const alpha = 0.03 + 0.03 * Math.sin(row * 0.2 + t);
+              ctx.fillStyle = `rgba(0,255,80,${alpha})`; ctx.fillRect(x, y+row, w, 1.5);
+            }
+            const sweep = ((t * 60) % (h + 20)) - 10;
+            const sweepGrad = ctx.createLinearGradient(0, y+sweep-8, 0, y+sweep+8);
+            sweepGrad.addColorStop(0, "rgba(0,0,0,0)"); sweepGrad.addColorStop(0.5, "rgba(255,0,60,0.25)"); sweepGrad.addColorStop(1, "rgba(0,0,0,0)");
+            ctx.fillStyle = sweepGrad; ctx.fillRect(x, y+sweep-8, w, 14);
+            ctx.strokeStyle = "rgba(0,255,90,0.8)"; ctx.lineWidth = 2.5;
+            ctx.shadowColor = "rgba(255,0,60,0.5)"; ctx.shadowBlur = 14;
+            ctx.strokeRect(x, y, w, h);
+            const bLen = 18; ctx.lineWidth = 3;
+            [[x,y,bLen,0,0,bLen],[x+w,y,-bLen,0,0,bLen],[x,y+h,bLen,0,0,-bLen],[x+w,y+h,-bLen,0,0,-bLen]].forEach(([cx,cy,dx1,dy1,dx2,dy2]) => {
+              ctx.beginPath(); ctx.moveTo(cx+dx1,cy+dy1); ctx.lineTo(cx,cy); ctx.lineTo(cx+dx2,cy+dy2); ctx.stroke();
+            });
+            ctx.restore();
+          }
+          drawFingerIndicatorXray(p1); drawFingerIndicatorXray(p2);
+          statusEl.textContent = "X-Ray Frame active";
+        } else {
+          statusEl.textContent = "Show both index fingers to activate";
+        }
+      }
+      function drawFingerIndicatorXray(p) {
+        ctx.save();
+        ctx.fillStyle = "rgba(0,220,255,0.25)"; ctx.strokeStyle = "#00e5ff"; ctx.lineWidth = 2;
+        ctx.shadowColor = "#00e5ff"; ctx.shadowBlur = 16;
+        ctx.beginPath(); ctx.arc(p.x, p.y, 10, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+        ctx.restore();
+      }
+      return { init, onCameraReady, stop };
+    }
+
+    function createTelekinesis() {
+      let rafId = null;
+      let ballImg = new Image(); ballImg.src = "assets/img/ball.png";
+      const radius = 58;
+      const ball = { x: 0, y: 0, vx: 3, vy: 2, mode: "wander", lastX: null, lastY: null };
+      function init() { ball.x = canvas.width/2; ball.y = canvas.height/2; ball.vx = 3; ball.vy = 2; ball.mode = "wander"; ball.lastX = null; ball.lastY = null; }
+      function onCameraReady() { if (rafId) cancelAnimationFrame(rafId); loop(); }
+      function stop() { if (rafId) cancelAnimationFrame(rafId); rafId = null; }
+      function loop() {
+        rafId = requestAnimationFrame(loop);
+        drawWebcamTo(ctx, 0);
+        let pinching = false, center = null;
+        const hand = globalHandsData[0] || null;
+        if (hand) { pinching = pinchDistance(hand) < 48; center = pinchCenter(hand); }
+        updateBall(pinching, center);
+        drawBall();
+        statusEl.textContent = ball.mode === "grab" ? "grabbed" : "pinch on the ball to grab";
+      }
+      function updateBall(pinching, center) {
+        const overBall = center && Math.hypot(center.x-ball.x, center.y-ball.y) < radius*1.3;
+        if (pinching && center && (ball.mode === "grab" || overBall)) {
+          ball.mode = "grab";
+          if (ball.lastX !== null && ball.lastY !== null) { ball.vx = center.x - ball.lastX; ball.vy = center.y - ball.lastY; }
+          ball.x = center.x; ball.y = center.y; ball.lastX = center.x; ball.lastY = center.y;
+          return;
+        }
+        if (ball.mode === "grab") { ball.mode = "throw"; ball.vx *= 1.6; ball.vy *= 1.6; }
+        ball.x += ball.vx; ball.y += ball.vy;
+        if (ball.x < radius) { ball.x = radius; ball.vx *= -1; }
+        if (ball.x > canvas.width - radius) { ball.x = canvas.width - radius; ball.vx *= -1; }
+        if (ball.y < radius) { ball.y = radius; ball.vy *= -1; }
+        if (ball.y > canvas.height - radius) { ball.y = canvas.height - radius; ball.vy *= -1; }
+        if (ball.mode === "throw") {
+          ball.vx *= .985; ball.vy *= .985;
+          if (Math.hypot(ball.vx, ball.vy) < 1.2) ball.mode = "wander";
+        } else if (ball.mode === "wander") {
+          if (Math.hypot(ball.vx, ball.vy) < 1.5) { ball.vx = (Math.random()-.5)*4; ball.vy = (Math.random()-.5)*4; }
+        }
+        ball.lastX = null; ball.lastY = null;
+      }
+      function drawBall() {
+        ctx.save();
+        ctx.shadowColor = "rgba(220,255,0,.65)"; ctx.shadowBlur = 20;
+        ctx.drawImage(ballImg, ball.x-radius, ball.y-radius, radius*2, radius*2);
+        ctx.restore();
+      }
+      return { init, onCameraReady, stop };
+    }
+
+    // ===================== RUNTIMES REGISTRY =====================
     const runtimes = {
-      electric: createElectric(),
-      torch: createTorch(),
-      piano: createPiano(),
-      scan: createScanEffect(),
-      dice: createDice(),
-      butterfly: createFaceFilter("butterfly"),
-      glitch: createGlitchFrame(), 
-      telekinesis: createTelekinesis(), 
+      electric:    createElectric(),
+      torch:       createTorch(),
+      piano:       createPiano(),
+      scan:        createScanEffect(),
+      dice:        createDice(),
+      butterfly:   createFaceFilter("butterfly"),
+      glitch:      createGlitchFrame(),
+      telekinesis: createTelekinesis(),
     };
 
     clearCanvas();
