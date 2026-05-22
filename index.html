@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Interactive Coding</title>
@@ -16,7 +16,6 @@
       --panel: rgba(255,255,255,.055);
       --cyan: #99ff00;
       --green: #00ff55;
-      /* Mobile safe area support */
       --safe-top: env(safe-area-inset-top, 0px);
       --safe-bottom: env(safe-area-inset-bottom, 0px);
       --safe-left: env(safe-area-inset-left, 0px);
@@ -31,7 +30,6 @@
       color: var(--fg);
       font-family: Arial, Helvetica, sans-serif;
       overflow-x: hidden;
-      /* Prevent pull-to-refresh on mobile */
       overscroll-behavior: none;
     }
     button { color: inherit; font: inherit; touch-action: manipulation; }
@@ -39,7 +37,6 @@
 
     .view { min-height: 100dvh; }
 
-    /* ===================== SPLASH ===================== */
     .view.splash {
       position: relative;
       display: grid;
@@ -87,7 +84,6 @@
     }
     #enterBtn:hover, #enterBtn:active { background: var(--fg); color: var(--bg); }
 
-    /* Cursor trail (desktop only) */
     .cursor-trail {
       position: fixed;
       width: 37px;
@@ -103,7 +99,6 @@
     }
     @media (hover: none) { .cursor-trail { display: none !important; } }
 
-    /* ===================== GALLERY ===================== */
     .gallery {
       padding: clamp(20px, 5vw, 92px) clamp(14px, 4vw, 52px);
       padding-top: calc(clamp(20px, 5vw, 92px) + var(--safe-top));
@@ -174,7 +169,6 @@
       line-height: 1.1;
     }
 
-    /* ===================== PROJECT ===================== */
     .project {
       display: flex;
       flex-direction: column;
@@ -207,7 +201,6 @@
     }
     #backBtn:hover, #backBtn:active { color: var(--fg); }
 
-    /* ---- STAGE: Desktop layout ---- */
     .stage {
       width: min(100%, 1120px);
       margin: 32px auto 0;
@@ -224,29 +217,32 @@
       background: #000;
       overflow: hidden;
     }
-    /* Desktop: 16:9 canvas */
     .canvas-wrap.desktop-ratio {
       aspect-ratio: 16 / 9;
       max-height: 68vh;
     }
-    /* Mobile: portrait 9:16 canvas */
+    /* Mobile: quadrato 1:1 */
     .canvas-wrap.mobile-ratio {
-      aspect-ratio: 9 / 16;
-      width: 100%;
-      max-height: none;
+      aspect-ratio: 1 / 1;
+      width: min(100%, calc(100dvh - 280px));
+      max-width: 100%;
+      margin: 0 auto;
     }
     #webcam {
-      position: absolute;
+      position: fixed;
+      left: -9999px;
+      top: 0;
       width: 1px;
       height: 1px;
       opacity: 0;
       pointer-events: none;
     }
-    #output {
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
+    #output,
+#output-mobile {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
     .panel {
       align-self: start;
       padding: 16px;
@@ -278,7 +274,6 @@
     #startBtn:hover, #startBtn:active { background: var(--fg); color: var(--bg); }
     .status { min-height: 18px; margin-top: 16px; font-size: 11px; }
 
-    /* ===================== MOBILE OVERRIDES ===================== */
     @media (max-width: 768px) {
       .gallery {
         padding: clamp(14px, 4vw, 30px);
@@ -291,34 +286,59 @@
       }
       .card { height: 180px; }
 
+      .project { min-height: 100dvh; }
+      body.project-open { overflow: auto; position: static; width: auto; }
+
       .stage {
         margin: 0;
-        grid-template-columns: 1fr;
+        display: flex;
+        flex-direction: column;
         gap: 0;
         padding: 0;
+        width: 100%;
+        max-width: 100%;
         overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
       }
       .canvas-wrap {
         border-left: none;
         border-right: none;
         border-radius: 0;
+        flex-shrink: 0;
       }
       .panel {
         border-radius: 0;
         border-left: none;
         border-right: none;
-        border-top: none;
-        padding-bottom: calc(16px + var(--safe-bottom));
+        border-top: 1px solid var(--line);
+        padding: 12px 16px;
+        padding-bottom: calc(14px + var(--safe-bottom));
+        flex-shrink: 0;
       }
-      /* Mobile: show portrait canvas */
-      .canvas-wrap.desktop-ratio { display: none; }
-      .canvas-wrap.mobile-ratio { display: block; }
+      .panel .project-kicker { font-size: 10px; }
+      .panel h2 {
+        margin: 4px 0 8px;
+        font-size: 20px;
+      }
+      .panel p {
+        font-size: 11px;
+        line-height: 1.45;
+        margin: 0 0 4px;
+      }
+      #startBtn {
+        min-height: 48px;
+        margin-top: 12px;
+        font-size: 13px;
+      }
+      .status { margin-top: 8px; font-size: 10px; }
+
+      .canvas-wrap.desktop-ratio { display: none !important; }
+      .canvas-wrap.mobile-ratio { display: block !important; }
     }
 
     @media (min-width: 769px) {
-      /* Desktop: hide portrait canvas, show landscape */
       .canvas-wrap.desktop-ratio { display: block; }
-      .canvas-wrap.mobile-ratio { display: none; }
+      .canvas-wrap.mobile-ratio { display: none !important; }
     }
 
     @media (max-width: 1000px) and (min-width: 769px) {
@@ -330,12 +350,13 @@
       .gallery-header { flex-direction: row; align-items: flex-end; }
     }
 
-    /* Prevent body scroll when project open (iOS fix) */
-    body.project-open { overflow: hidden; position: fixed; width: 100%; }
+    body.project-open { overflow: hidden; }
+    @media (max-width: 768px) {
+      body.project-open { overflow: auto; }
+    }
   </style>
 </head>
 <body>
-  <!-- SPLASH -->
   <section id="view-splash" class="view splash">
     <div class="splash-inner">
       <p class="mini">interactive webcam filters</p>
@@ -345,7 +366,6 @@
     </div>
   </section>
 
-  <!-- GALLERY -->
   <section id="view-gallery" class="view gallery hidden">
     <header class="gallery-header">
       <h1>Creative Coding</h1>
@@ -354,23 +374,20 @@
     <div id="projectGrid" class="grid"></div>
   </section>
 
-  <!-- PROJECT VIEW -->
   <section id="view-project" class="view project hidden">
     <header class="topbar">
       <button id="backBtn" type="button">← Back</button>
       <span id="projectKicker" class="project-kicker">mediapipe - webcam</span>
     </header>
     <main class="stage">
-      <video id="webcam" autoplay muted playsinline></video>
+      <video id="webcam" autoplay muted playsinline webkit-playsinline></video>
 
-      <!-- LANDSCAPE canvas (desktop) -->
       <div class="canvas-wrap desktop-ratio">
         <canvas id="output" width="960" height="540"></canvas>
       </div>
 
-      <!-- PORTRAIT canvas (mobile) -->
       <div class="canvas-wrap mobile-ratio">
-        <canvas id="output-mobile" width="540" height="960"></canvas>
+        <canvas id="output-mobile" width="720" height="720"></canvas>
       </div>
 
       <aside class="panel">
@@ -383,35 +400,48 @@
     </main>
   </section>
 
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
 
-  <script>
-    // ===================== MOBILE DETECTION =====================
-    const isMobile = () => window.innerWidth <= 768 || ('ontouchstart' in window);
+    <script>
+    const MOBILE_BREAK = 768;
+    const isMobile = () => window.innerWidth <= MOBILE_BREAK;
 
-    // Active canvas & context (switches based on mobile/desktop)
-    let canvas = document.getElementById("output");
-    let ctx = canvas.getContext("2d", { willReadFrequently: true });
     const canvasDesktop = document.getElementById("output");
     const canvasMobile = document.getElementById("output-mobile");
     const ctxDesktop = canvasDesktop.getContext("2d", { willReadFrequently: true });
     const ctxMobile = canvasMobile.getContext("2d", { willReadFrequently: true });
 
+    let canvas = canvasDesktop;
+    let ctx = ctxDesktop;
+
+    function syncMobileCanvasSize() {
+      if (!isMobile()) return;
+      const wrap = document.querySelector(".canvas-wrap.mobile-ratio");
+      if (!wrap) return;
+      const size = Math.max(240, Math.round(wrap.clientWidth));
+      if (canvasMobile.width !== size || canvasMobile.height !== size) {
+        canvasMobile.width = size;
+        canvasMobile.height = size;
+      }
+    }
+
     function updateActiveCanvas() {
       if (isMobile()) {
         canvas = canvasMobile;
         ctx = ctxMobile;
+        syncMobileCanvasSize();
       } else {
         canvas = canvasDesktop;
         ctx = ctxDesktop;
       }
     }
     updateActiveCanvas();
-    window.addEventListener('resize', updateActiveCanvas);
+    window.addEventListener("resize", () => {
+      updateActiveCanvas();
+      if (currentRuntime?.init) currentRuntime.init();
+    });
 
-    // ===================== PROJECT DATA =====================
     const PROJECTS = [
       { id:"electric", number:"experiment 01", title:"Electricity", kicker:"mediapipe - two fingers", tagline:"blue to red signal", description:"Bring the two index fingertips closer: an electric arc appears. It starts blue, then turns red as the fingers approach.", img:"assets/img/electricity.png" },
       { id:"torch", number:"experiment 02", title:"Torch", kicker:"mediapipe - index torch", tagline:"finger flashlight", description:"Point your index finger like a flashlight. The beam follows the finger direction and plays on/off click sounds.", img:"assets/img/light.png" },
@@ -423,7 +453,6 @@
       { id:"telekinesis", number:"experiment 08", title:"Telekinesis", kicker:"mediapipe - pinch ball", tagline:"grab and throw", description:"Pinch your thumb and index to grab the energy ball. Release to launch it with physics.", img:"assets/img/ball2.png" },
     ];
 
-    // ===================== DOM REFS =====================
     const splashView = document.getElementById("view-splash");
     const galleryView = document.getElementById("view-gallery");
     const projectView = document.getElementById("view-project");
@@ -436,16 +465,16 @@
     const projectNumber = document.getElementById("projectNumber");
     const projectDescription = document.getElementById("projectDescription");
 
-    let globalCamera = null;
+    let cameraStream = null;
     let cameraStarted = false;
+    let frameLoopId = null;
     let activeHandsInstance = null;
     let activeFaceMeshInstance = null;
     let currentRuntime = null;
     let globalHandsData = [];
     let globalFaceData = null;
 
-    // ===================== CURSOR TRAIL (desktop only) =====================
-    if (!('ontouchstart' in window)) {
+    if (!("ontouchstart" in window)) {
       const TRAIL_SIZE = 20;
       const trailElements = [];
       const swarmOffsets = [];
@@ -476,12 +505,11 @@
           trailElements[i].style.left = currentPositions[i].x + "px";
           trailElements[i].style.top = currentPositions[i].y + "px";
           const t = i / TRAIL_SIZE;
-          trailElements[i].style.opacity = 0.25 + (1 - t) * 0.6;
+          trailElements[i].style.opacity = String(0.25 + (1 - t) * 0.6);
         }
       });
     }
 
-    // ===================== NAVIGATION =====================
     document.getElementById("enterBtn").addEventListener("click", () => {
       splashView.classList.add("hidden");
       galleryView.classList.remove("hidden");
@@ -547,49 +575,18 @@
       }
     }
 
-    // ===================== CAMERA SYSTEM =====================
-    function startGlobalCameraSystem() {
-      startButtonLoading();
-      const mobile = isMobile();
-
-      activeHandsInstance = new Hands({
-        locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
-      });
-      activeHandsInstance.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.68, minTrackingConfidence: 0.55 });
-      activeHandsInstance.onResults(res => { globalHandsData = res.multiHandLandmarks || []; });
-
-      activeFaceMeshInstance = new FaceMesh({
-        locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
-      });
-      activeFaceMeshInstance.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.55, minTrackingConfidence: 0.50 });
-      activeFaceMeshInstance.onResults(res => { globalFaceData = res.multiFaceLandmarks?.[0] ?? null; });
-
-      // Mobile: portrait camera (9:16 → 540×960)
-      // Desktop: landscape (16:9 → 960×540)
-      const camWidth = mobile ? 540 : 960;
-      const camHeight = mobile ? 960 : 540;
-
-      globalCamera = new Camera(video, {
-        onFrame: async () => {
-          await activeHandsInstance.send({ image: video });
-          await activeFaceMeshInstance.send({ image: video });
-        },
-        width: camWidth,
-        height: camHeight,
-        facingMode: mobile ? "user" : "user",
-      });
-
-      globalCamera.start().then(() => {
-        cameraStarted = true;
-        startButtonOn();
-        startBtn.disabled = true;
-        if (currentRuntime) currentRuntime.onCameraReady();
-      }).catch(startButtonError);
+    function stopCamera() {
+      cameraStarted = false;
+      if (frameLoopId) cancelAnimationFrame(frameLoopId);
+      frameLoopId = null;
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(t => t.stop());
+        cameraStream = null;
+      }
+      video.srcObject = null;
     }
 
-    // ===================== UTILITIES =====================
     function clearCanvas() {
-      // Clear both canvases
       ctxDesktop.fillStyle = "#050505";
       ctxDesktop.fillRect(0, 0, canvasDesktop.width, canvasDesktop.height);
       ctxMobile.fillStyle = "#050505";
@@ -602,13 +599,30 @@
     }
 
     function drawWebcamTo(targetCtx, dim = 0) {
+      const cw = canvas.width;
+      const ch = canvas.height;
+      const vw = video.videoWidth;
+      const vh = video.videoHeight;
+      if (!vw || !vh) {
+        targetCtx.fillStyle = "#050505";
+        targetCtx.fillRect(0, 0, cw, ch);
+        return;
+      }
+      const scale = Math.max(cw / vw, ch / vh);
+      const drawW = vw * scale;
+      const drawH = vh * scale;
+      const offsetX = (cw - drawW) / 2;
+      const offsetY = (ch - drawH) / 2;
       targetCtx.save();
+      targetCtx.fillStyle = "#050505";
+      targetCtx.fillRect(0, 0, cw, ch);
+      targetCtx.translate(cw, 0);
       targetCtx.scale(-1, 1);
-      targetCtx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+      targetCtx.drawImage(video, offsetX, offsetY, drawW, drawH);
       targetCtx.restore();
       if (dim > 0) {
         targetCtx.fillStyle = `rgba(0,0,0,${dim})`;
-        targetCtx.fillRect(0, 0, canvas.width, canvas.height);
+        targetCtx.fillRect(0, 0, cw, ch);
       }
     }
 
@@ -652,7 +666,7 @@
     function startButtonError(err) {
       startBtn.disabled = false;
       startBtn.textContent = "Retry";
-      statusEl.textContent = err.message || "camera unavailable";
+      statusEl.textContent = err?.message || "camera unavailable";
     }
 
     function faceBox(landmarks, padX = 32, padY = 42) {
@@ -663,6 +677,87 @@
       const minY = Math.max(0, Math.min(...ys) - padY);
       const maxY = Math.min(canvas.height, Math.max(...ys) + padY);
       return { x: minX, y: minY, w: Math.max(10, maxX - minX), h: Math.max(10, maxY - minY), cx: (minX + maxX) / 2, cy: (minY + maxY) / 2, rx: Math.max(10, (maxX - minX) / 2), ry: Math.max(10, (maxY - minY) / 2) };
+    }
+
+    async function startGlobalCameraSystem() {
+      if (!window.isSecureContext) {
+        startButtonError(new Error("Serve HTTPS (o localhost) per la camera"));
+        return;
+      }
+      if (!navigator.mediaDevices?.getUserMedia) {
+        startButtonError(new Error("Camera non supportata"));
+        return;
+      }
+
+      startButtonLoading();
+      updateActiveCanvas();
+
+      try {
+        const mobile = isMobile();
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            facingMode: { ideal: "user" },
+            width: { ideal: mobile ? 720 : 1280 },
+            height: { ideal: mobile ? 720 : 720 },
+          },
+        });
+
+        cameraStream = stream;
+        video.srcObject = stream;
+        video.muted = true;
+        video.setAttribute("playsinline", "");
+        video.setAttribute("webkit-playsinline", "");
+        await video.play();
+
+        await new Promise(resolve => {
+          if (video.videoWidth > 0) return resolve();
+          video.addEventListener("loadeddata", resolve, { once: true });
+        });
+
+        syncMobileCanvasSize();
+
+        activeHandsInstance = new Hands({
+          locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
+        });
+        activeHandsInstance.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.68, minTrackingConfidence: 0.55 });
+        activeHandsInstance.onResults(res => { globalHandsData = res.multiHandLandmarks || []; });
+
+        activeFaceMeshInstance = new FaceMesh({
+          locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
+        });
+        activeFaceMeshInstance.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.55, minTrackingConfidence: 0.5 });
+        activeFaceMeshInstance.onResults(res => { globalFaceData = res.multiFaceLandmarks?.[0] ?? null; });
+
+        cameraStarted = true;
+        startButtonOn();
+        startBtn.disabled = true;
+        statusEl.textContent = "camera streaming";
+
+        let busy = false;
+        const tick = async () => {
+          if (!cameraStarted) return;
+          frameLoopId = requestAnimationFrame(tick);
+          if (busy || video.readyState < 2) return;
+          busy = true;
+          try {
+            await activeHandsInstance.send({ image: video });
+            await activeFaceMeshInstance.send({ image: video });
+          } catch (_) {}
+          busy = false;
+        };
+        tick();
+
+        if (currentRuntime) currentRuntime.onCameraReady();
+      } catch (err) {
+        cameraStarted = false;
+        if (cameraStream) {
+          cameraStream.getTracks().forEach(t => t.stop());
+          cameraStream = null;
+        }
+        video.srcObject = null;
+        startButtonError(err);
+      }
     }
 
     // ===================== RUNTIMES =====================
