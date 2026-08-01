@@ -369,7 +369,7 @@
   <section id="view-gallery" class="view gallery hidden">
     <header class="gallery-header">
       <h1>Creative Coding</h1>
-      <p>8 interactive filters</p>
+      <p>11 interactive filters</p>
     </header>
     <div id="projectGrid" class="grid"></div>
   </section>
@@ -451,6 +451,9 @@
       { id:"butterfly", number:"experiment 06", title:"Butterfly", kicker:"face mesh - butterfly overlay", tagline:"butterfly lands on face", description:"A butterfly flies in and attaches to the face, then floats and rotates with a light wing tremble.", img:"assets/img/butterf.png" },
       { id:"glitch", number:"experiment 07", title:"X-Ray Frame", kicker:"mediapipe - two finger frame", tagline:"scan through reality", description:"Point both index fingers to define a rectangular area. Everything inside becomes an X-ray scan.", img:"assets/img/glitch.png" },
       { id:"telekinesis", number:"experiment 08", title:"Telekinesis", kicker:"mediapipe - pinch ball", tagline:"grab and throw", description:"Pinch your thumb and index to grab the energy ball. Release to launch it with physics.", img:"assets/img/ball2.png" },
+      { id:"graffiti", number:"experiment 09", title:"Spray", kicker:"mediapipe - index finger", tagline:"tag the air", description:"Raise your index finger to spray paint on the canvas. The stroke is gritty and grainy like real aerosol. A spray sound plays every time you draw. Use the undo arrow (↩) on screen to step back.", img:"assets/img/spray.png" },
+      { id:"spiderweb", number:"experiment 10", title:"Spider Web", kicker:"mediapipe - raised fingers", tagline:"weave with your hands", description:"Raise fingers to create web nodes. Each raised fingertip connects to all others with vibrating white threads. Cross your hands, layer fingers — the web shifts and twitches with every move.", img:"assets/img/rete.png" },
+      { id:"party", number:"experiment 11", title:"Party", kicker:"face mesh - glasses detector", tagline:"put your shades on", description:"Put on a pair of sunglasses to kick off the party: sweeping lights, colored flares and a strobe take over the screen. Take the glasses off and the party stops. Want your own soundtrack? Tap 'Upload your song' to drop in any track you like.", img:"assets/img/disco.jpeg" },
     ];
 
     const splashView = document.getElementById("view-splash");
@@ -1295,6 +1298,657 @@
       return { init, onCameraReady, stop };
     }
 
+    // ===================== SPRAY (Graffiti) =====================
+    function createGraffiti() {
+      let rafId = null;
+      let strokes = [];       // array of stroke arrays
+      let currentStroke = []; // points in current stroke
+      let wasDrawing = false;
+
+      // Spray sound (bomboletta)
+      const spraySound = new Audio("assets/sfx/bomboletta.wav");
+      spraySound.loop = true;
+
+      // Undo button overlay
+      let undoBtn = null;
+
+      function buildUndoButton() {
+        if (undoBtn) return;
+        undoBtn = document.createElement("button");
+        undoBtn.textContent = "↩";
+        undoBtn.title = "Undo last stroke";
+        undoBtn.style.cssText = `
+          position:absolute; bottom:14px; right:14px;
+          width:48px; height:48px;
+          border-radius:50%; border:2px solid rgba(255,255,255,0.55);
+          background:rgba(0,0,0,0.55); color:#fff;
+          font-size:22px; cursor:pointer; z-index:10;
+          display:flex; align-items:center; justify-content:center;
+          transition:background 0.2s, border-color 0.2s;
+          line-height:1;
+        `;
+        undoBtn.addEventListener("mouseenter", () => { undoBtn.style.background="rgba(255,255,255,0.18)"; undoBtn.style.borderColor="#fff"; });
+        undoBtn.addEventListener("mouseleave", () => { undoBtn.style.background="rgba(0,0,0,0.55)"; undoBtn.style.borderColor="rgba(255,255,255,0.55)"; });
+        undoBtn.addEventListener("click", () => { if (strokes.length > 0) strokes.pop(); });
+        // Inject into canvas-wrap
+        const wrap = canvas.closest(".canvas-wrap") || canvas.parentElement;
+        if (wrap) { wrap.style.position = "relative"; wrap.appendChild(undoBtn); }
+      }
+
+      function removeUndoButton() {
+        if (undoBtn && undoBtn.parentElement) undoBtn.parentElement.removeChild(undoBtn);
+        undoBtn = null;
+      }
+
+      function init() {
+        strokes = [];
+        currentStroke = [];
+        wasDrawing = false;
+        removeUndoButton();
+      }
+
+      function onCameraReady() {
+        if (rafId) cancelAnimationFrame(rafId);
+        buildUndoButton();
+        loop();
+      }
+
+      function stop() {
+        if (rafId) cancelAnimationFrame(rafId); rafId = null;
+        spraySound.pause(); spraySound.currentTime = 0;
+        removeUndoButton();
+      }
+
+      // Returns true if index is up and other fingers (middle,ring,pinky) are down
+      function indexOnly(hand) {
+        const indexUp = hand[8].y < hand[6].y - 0.02;
+        const middleDown = hand[12].y > hand[10].y;
+        const ringDown = hand[16].y > hand[14].y;
+        const pinkyDown = hand[20].y > hand[18].y;
+        return indexUp && middleDown && ringDown && pinkyDown;
+      }
+
+      function loop() {
+        rafId = requestAnimationFrame(loop);
+        // Draw webcam as base (very slight dim)
+        drawWebcamTo(ctx, 0.08);
+
+        // Render all committed strokes
+        strokes.forEach(s => drawSprayStroke(s));
+
+        const hand = globalHandsData[0] || null;
+        const drawing = !!hand && indexOnly(hand);
+
+        if (drawing) {
+          const tip = point(hand[8]);
+          if (!wasDrawing) {
+            currentStroke = [];
+            spraySound.currentTime = 0;
+            spraySound.play().catch(() => {});
+          }
+          currentStroke.push({ x: tip.x, y: tip.y });
+          drawSprayStroke(currentStroke);
+          // Draw live fingertip indicator
+          ctx.save();
+          ctx.strokeStyle = "rgba(255,255,255,0.5)";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(tip.x, tip.y, 18, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        } else if (wasDrawing && currentStroke.length > 0) {
+          strokes.push(currentStroke);
+          currentStroke = [];
+          spraySound.pause(); spraySound.currentTime = 0;
+        } else if (!drawing) {
+          spraySound.pause();
+        }
+
+        wasDrawing = drawing;
+        statusEl.textContent = drawing ? "spraying…" : (globalHandsData.length ? "raise index finger to spray" : "show a hand");
+      }
+
+      function drawSprayStroke(strokePts) {
+        if (strokePts.length < 1) return;
+        // Pick a vibrant spray color seeded by stroke identity
+        const hue = (strokePts[0].x * 1.3 + strokePts[0].y * 0.7 + strokes.length * 47) % 360;
+        const color = `hsl(${Math.round(hue)}, 90%, 60%)`;
+
+        // Solid "pen" core so the line stays legible
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        ctx.lineWidth = 6;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.globalAlpha = 0.88;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 5;
+        if (strokePts.length > 1) {
+          ctx.beginPath();
+          ctx.moveTo(strokePts[0].x, strokePts[0].y);
+          for (let i = 1; i < strokePts.length; i++) ctx.lineTo(strokePts[i].x, strokePts[i].y);
+          ctx.stroke();
+        } else {
+          ctx.beginPath();
+          ctx.arc(strokePts[0].x, strokePts[0].y, 3.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+
+        // Light aerosol grain around the core — kept tight so it doesn't fray the line
+        strokePts.forEach((pt, i) => {
+          const prev = i > 0 ? strokePts[i - 1] : pt;
+          const speed = Math.hypot(pt.x - prev.x, pt.y - prev.y);
+          const density = Math.max(3, 10 - speed * 0.3);
+          const radius = 7 + speed * 0.12;
+
+          for (let d = 0; d < density; d++) {
+            const angle = Math.random() * Math.PI * 2;
+            const r = Math.pow(Math.random(), 0.6) * radius;
+            const sx = pt.x + Math.cos(angle) * r;
+            const sy = pt.y + Math.sin(angle) * r;
+            const alpha = (0.1 + Math.random() * 0.22) * (1 - r / (radius * 1.2));
+            const size = 0.8 + Math.random() * 1.5;
+
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = Math.random() < 0.15 ? `hsl(${Math.round(hue)}, 60%, 30%)` : color;
+            ctx.beginPath();
+            ctx.arc(sx, sy, size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          }
+        });
+      }
+
+      return { init, onCameraReady, stop };
+    }
+
+    // ===================== SPIDER WEB =====================
+    function createSpiderweb() {
+      let rafId = null;
+      let webNodes = []; // smoothed positions
+      let rawNodes = [];
+      const TIPS = [4, 8, 12, 16, 20]; // thumb tip, index…pinky
+      const JOINTS = [3, 6, 10, 14, 18];
+      let frame = 0;
+
+      function init() { webNodes = []; rawNodes = []; frame = 0; }
+      function onCameraReady() { if (rafId) cancelAnimationFrame(rafId); loop(); }
+      function stop() { if (rafId) cancelAnimationFrame(rafId); rafId = null; }
+
+      function fingerIsUp(hand, fi) {
+        if (fi === 0) {
+          // thumb: compare x distance from wrist
+          const tip = hand[4], joint = hand[3], wrist = hand[0];
+          return Math.abs(tip.x - wrist.x) > Math.abs(joint.x - wrist.x) + 0.022;
+        }
+        return hand[TIPS[fi]].y < hand[JOINTS[fi]].y - 0.015;
+      }
+
+      function loop() {
+        rafId = requestAnimationFrame(loop);
+        frame++;
+        drawWebcamTo(ctx, 0.55); // heavier dim for dramatic web effect
+
+        // Collect all raised fingertips across all hands
+        const newRaw = [];
+        globalHandsData.forEach(hand => {
+          TIPS.forEach((tipIdx, fi) => {
+            if (fingerIsUp(hand, fi)) {
+              newRaw.push(point(hand[tipIdx]));
+            }
+          });
+        });
+
+        // Smooth node positions
+        webNodes = newRaw.map((raw, i) => {
+          const prev = webNodes[i] || raw;
+          return { x: prev.x + (raw.x - prev.x) * 0.35, y: prev.y + (raw.y - prev.y) * 0.35 };
+        });
+        rawNodes = newRaw;
+
+        if (webNodes.length >= 2) {
+          drawWeb(webNodes);
+          statusEl.textContent = `${webNodes.length} node${webNodes.length>1?"s":""} active`;
+        } else if (webNodes.length === 1) {
+          // Draw lone node halo
+          drawNodeHalo(webNodes[0]);
+          statusEl.textContent = "raise more fingers to weave";
+        } else {
+          statusEl.textContent = "raise fingers to create the web";
+        }
+      }
+
+      function drawWeb(nodes) {
+        const t = frame * 0.025;
+        const n = nodes.length;
+
+        // Draw connecting threads between every pair
+        for (let i = 0; i < n; i++) {
+          for (let j = i + 1; j < n; j++) {
+            const a = nodes[i], b = nodes[j];
+            const dist = Math.hypot(a.x - b.x, a.y - b.y);
+            // Vibration offset based on time and distance
+            const midX = (a.x + b.x) / 2 + Math.sin(t * 1.3 + i * 1.1) * (dist * 0.04);
+            const midY = (a.y + b.y) / 2 + Math.cos(t * 1.7 + j * 0.9) * (dist * 0.04);
+
+            // Fade with distance — very long threads are more transparent
+            const alpha = Math.max(0.08, 1 - dist / (canvas.width * 0.85));
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(a.x, a.y);
+            ctx.quadraticCurveTo(midX, midY, b.x, b.y);
+            ctx.strokeStyle = `rgba(255,255,255,${(alpha * 0.7).toFixed(2)})`;
+            ctx.lineWidth = Math.max(0.5, 2.5 - dist / (canvas.width * 0.4));
+            ctx.shadowColor = "rgba(200,230,255,0.6)";
+            ctx.shadowBlur = 6;
+            ctx.stroke();
+            ctx.restore();
+
+            // Dew drop at midpoint on stronger threads
+            if (alpha > 0.4 && Math.random() < 0.04) {
+              ctx.save();
+              ctx.fillStyle = `rgba(200,230,255,${(alpha * 0.5).toFixed(2)})`;
+              ctx.beginPath();
+              ctx.arc(midX, midY, 1.5, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.restore();
+            }
+          }
+        }
+
+        // Draw node halos
+        nodes.forEach(nd => drawNodeHalo(nd));
+      }
+
+      function drawNodeHalo(nd) {
+        const pulse = 0.7 + 0.3 * Math.sin(frame * 0.08);
+        const r = 10 * pulse;
+        const g = ctx.createRadialGradient(nd.x, nd.y, 0, nd.x, nd.y, r * 2.5);
+        g.addColorStop(0,   `rgba(255,255,255,${0.9 * pulse})`);
+        g.addColorStop(0.3, `rgba(190,220,255,${0.5 * pulse})`);
+        g.addColorStop(1,   "rgba(0,0,0,0)");
+        ctx.save();
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(nd.x, nd.y, r * 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      return { init, onCameraReady, stop };
+    }
+
+    // ===================== PARTY (Glasses Detector) =====================
+function createParty() {
+  let rafId = null;
+  let overlayEl = null;
+  let isPartyMode = false;
+
+// Caricamento del file audio dalla tua cartella sfx
+const partyMusic = new Audio('assets/sfx/musicaparty.wav');
+partyMusic.loop = true; // Impostalo a "true" se vuoi che la canzone ricominci quando finisce
+
+  
+
+  // --- Detection tuning (same logic as the standalone prototype) ---
+  const ENTER_RATIO = 0.62;
+  const EXIT_RATIO = 0.85;
+  const ON_DELAY_MS = 120;
+  const OFF_DELAY_MS = 50;
+  const FACE_LOST_GRACE_MS = 1200;
+  const SMOOTHING = 0.3;
+  const BASELINE_ALPHA = 0.03;
+  const SAMPLE_STRIDE = 3;
+
+  let smoothedBrightness = null;
+  let baselineBrightness = null;
+  let darkSince = null;
+  let brightSince = null;
+  let lastFaceSeen = 0;
+
+  function injectStyles() {
+    if (document.getElementById("party-style")) return;
+    const style = document.createElement("style");
+    style.id = "party-style";
+    style.textContent = `
+          .canvas-wrap { container-type: size; position: relative; overflow: hidden; }
+
+          @keyframes partyZoomPulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.02);} }
+          .party-canvas-zoom { animation: partyZoomPulse 0.15s infinite ease-in-out; }
+
+          .party-overlay { position:absolute; inset:0; pointer-events:none; --vx:50%; --vy:50%; z-index: 10; }
+
+          /* --- MODIFICA: Vignetta più aperta e centro chiaro --- */
+          .party-overlay .party-vignette {
+            position:absolute; top:0; left:0; width:100%; height:100%;
+            /* Parte trasparente fino al 40%, poi sfuma al nero molto tardi (80%-100%) */
+            background: radial-gradient(circle at var(--vx) var(--vy), transparent 40%, rgba(0,0,0,0.3) 60%, rgba(0,0,0,0.9) 80%, rgba(0,0,0,1) 100%);
+            opacity:0; transition:opacity .5s ease; pointer-events:none; z-index:10;
+          }
+          .party-overlay.active .party-vignette { opacity:1; }
+
+          /* --- MODIFICA: Fari (Scanner) resi visibili --- */
+          .party-overlay .party-scanner {
+            position:absolute; top:-10cqh; width:65cqw; height:160cqh;
+            transform-origin: top center; z-index:5;
+            /* Rimosso mix-blend-mode che li nascondeva, aumentata opacità */
+            opacity:0; transition:opacity .2s;
+            clip-path: polygon(40% 0%, 60% 0%, 80% 100%, 20% 100%);
+            pointer-events:none;
+          }
+          .party-overlay .party-scanner-left  { left:-15%;  animation: partyScanLeft 2s infinite ease-in-out, partyColorShift 4s infinite linear; }
+          .party-overlay .party-scanner-right { right:-15%; animation: partyScanRight 2s infinite ease-in-out, partyColorShift 4s infinite linear -2s; }
+          /* Opacità piena per renderli visibili */
+          .party-overlay.active .party-scanner { opacity:1; }
+
+          @keyframes partyScanLeft  { 0%{transform:rotate(30deg);} 50%{transform:rotate(-20deg);} 100%{transform:rotate(30deg);} }
+          @keyframes partyScanRight { 0%{transform:rotate(-30deg);} 50%{transform:rotate(20deg);} 100%{transform:rotate(-30deg);} }
+          @keyframes partyColorShift {
+            0%,100%{background:rgba(255,255,255,0.5);}
+            40%{background:rgba(255,0,255,0.5);} /* Magenta */
+            60%{background:rgba(255,255,0,0.5);} /* Yellow */
+            80%{background:rgba(57,255,20,0.5);}  /* Green */
+          }
+
+          .party-overlay .party-lights { position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; pointer-events:none; transition:opacity .5s; z-index:6; mix-blend-mode:screen; }
+          .party-overlay.active .party-lights { opacity:1; }
+
+          /* Bagliori base */
+          .party-overlay .party-flare { position:absolute; width:40cqw; height:40cqw; border-radius:50%; filter:blur(80px); opacity:0; transform:scale(0.5); }
+
+          /* Traiettorie esistenti ottimizzate */
+          .party-overlay .f1 { background:rgba(255,230,0,0.7); animation: partySweep1 2s infinite linear; }
+          .party-overlay .f2 { background:rgba(255,0,127,0.7); animation: partySweep2 3s infinite linear 1s; }
+          .party-overlay .f3 { background:rgba(255,255,255,0.6); animation: partySweep3 6s infinite linear 2s; }
+          .party-overlay .f4 { background:rgba(0,255,204,0.7); animation: partySweep1 5.5s infinite linear 0.5s; }
+          .party-overlay .f5 { background:rgba(180,0,255,0.7); animation: partySweep2 4.5s infinite linear 1.5s; }
+          .party-overlay .f6 { background:rgba(57,255,20,0.7); animation: partySweep3 6.5s infinite linear 2.5s; }
+
+          /* --- AGGIUNTA: Nuovi bagliori con movimenti più randomici --- */
+          .party-overlay .f7 { background:rgba(255,100,0,0.6); width:50cqw; height:50cqw; animation: partySweep4 7s infinite linear -1s; }
+          .party-overlay .f8 { background:rgba(0,100,255,0.6); width:35cqw; height:35cqw; animation: partySweep5 8s infinite linear -3s; }
+          .party-overlay .f9 { background:rgba(255,0,0,0.5); width:45cqw; height:45cqw; animation: partySweep6 9s infinite linear -5s; }
+
+          @keyframes partySweep1 {
+            0%{opacity:0; transform:translate(-20cqw, -20cqh) scale(0.5);}
+            20%{opacity:1;}
+            50%{transform:translate(100cqw, 40cqh) scale(1.5);}
+            80%{opacity:1;}
+            100%{opacity:0; transform:translate(40cqw, 120cqh) scale(0.5);}
+          }
+          @keyframes partySweep2 {
+            0%{opacity:0; transform:translate(120cqw, 20cqh) scale(0.8);}
+            20%{opacity:1;}
+            50%{transform:translate(0cqw, 80cqh) scale(1.2);}
+            80%{opacity:1;}
+            100%{opacity:0; transform:translate(60cqw, -20cqh) scale(0.8);}
+          }
+          @keyframes partySweep3 {
+            0%{opacity:0; transform:translate(50cqw, 120cqh) scale(0.6);}
+            30%{opacity:1;}
+            60%{transform:translate(20cqw, 20cqh) scale(1.4);}
+            80%{opacity:1;}
+            100%{opacity:0; transform:translate(100cqw, 50cqh) scale(0.6);}
+          }
+          /* Nuove traiettorie "random" */
+          @keyframes partySweep4 {
+            0%{opacity:0; transform:translate(10cqw, 10cqh) scale(0.5);}
+            15%{opacity:0.8;}
+            50%{transform:translate(80cqw, 90cqh) scale(1.8);}
+            85%{opacity:0.8;}
+            100%{opacity:0; transform:translate(20cqw, 50cqh) scale(0.5);}
+          }
+          @keyframes partySweep5 {
+            0%{opacity:0; transform:translate(90cqw, 80cqh) scale(1);}
+            10%{opacity:0.7;}
+            40%{transform:translate(10cqw, 20cqh) scale(0.6);}
+            70%{transform:translate(50cqw, 50cqh) scale(1.3);}
+            90%{opacity:0.7;}
+            100%{opacity:0; transform:translate(90cqw, 80cqh) scale(1);}
+          }
+          @keyframes partySweep6 {
+            0%{opacity:0; transform:translate(50cqw, -20cqh) scale(1.2);}
+            25%{opacity:0.9; transform:translate(10cqw, 40cqh) scale(0.8);}
+            50%{transform:translate(90cqw, 60cqh) scale(1.5);}
+            75%{opacity:0.9; transform:translate(30cqw, 90cqh) scale(1);}
+            100%{opacity:0; transform:translate(50cqw, 120cqh) scale(1.2);}
+          }
+
+          .party-overlay .party-strobe { position:absolute; top:0; left:0; width:100%; height:100%; background:#fff; opacity:0; pointer-events:none; z-index:20; }
+          .party-overlay.active .party-strobe { animation: partyFlash 5s infinite; }
+          /* Strobo leggermente più lento e meno aggressivo visto che ora è tutto più chiaro */
+          @keyframes partyFlash { 0%,18%,20%,45%,47%,48%,78%,80%,95%,97%,100%{opacity:0;} 19%{opacity:.2;} 46%{opacity:.25;} 79%{opacity:.15;} 96%{opacity:.2;} }
+
+          .party-overlay .party-upload { position:absolute; bottom:14px; left:50%; transform:translateX(-50%); pointer-events:auto; z-index:30; }
+          .party-overlay .party-upload-label {
+            background:rgba(0,0,0,0.7); border:2px solid #39ff14; color:#39ff14;
+            padding:8px 16px; border-radius:50px; cursor:pointer; font-weight:bold;
+            font-size:11px; text-transform:uppercase; letter-spacing:1.5px;
+            box-shadow:0 0 10px rgba(57,255,20,0.3); display:inline-block; transition:.3s;
+          }
+          .party-overlay .party-upload-label:hover { background:#39ff14; color:#000; box-shadow:0 0 20px #39ff14; }
+        `;
+    document.head.appendChild(style);
+  }
+
+  function buildOverlay() {
+    if (overlayEl) return;
+    injectStyles();
+    overlayEl = document.createElement("div");
+    overlayEl.className = "party-overlay";
+    overlayEl.innerHTML = `
+          <div class="party-scanner party-scanner-left"></div>
+          <div class="party-scanner party-scanner-right"></div>
+          <div class="party-lights">
+            <div class="party-flare f1"></div>
+            <div class="party-flare f2"></div>
+            <div class="party-flare f3"></div>
+            <div class="party-flare f4"></div>
+            <div class="party-flare f5"></div>
+            <div class="party-flare f6"></div>
+            <div class="party-flare f7"></div>
+            <div class="party-flare f8"></div>
+            <div class="party-flare f9"></div>
+          </div>
+          <div class="party-strobe"></div>
+          <div class="party-vignette"></div>
+          <div class="party-upload">
+            <label for="partySongInput" class="party-upload-label">🎵 Upload your song</label>
+            <input type="file" id="partySongInput" accept="audio/*" style="display:none">
+          </div>
+        `;
+    // Assumiamo che 'canvas' sia accessibile globalmente come nel codice originale
+    const wrap = canvas.closest(".canvas-wrap") || canvas.parentElement;
+    if (wrap) {
+      wrap.appendChild(overlayEl);
+    }
+
+    const uploadInput = overlayEl.querySelector("#partySongInput");
+    uploadInput.addEventListener("change", e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const objectUrl = URL.createObjectURL(file);
+      partyMusic.src = objectUrl;
+      const label = overlayEl.querySelector(".party-upload-label");
+      label.textContent = "🎶 Uploaded track";
+      // Se siamo già in party mode, prova a riprodurre subito
+      if (isPartyMode) {
+          partyMusic.play().catch(() => {
+              console.log("Autoplay blocked after upload, waiting for interaction.");
+          });
+      }
+    });
+  }
+
+  function removeOverlay() {
+    if (overlayEl && overlayEl.parentElement) overlayEl.parentElement.removeChild(overlayEl);
+    overlayEl = null;
+  }
+
+  function togglePartyMode(active) {
+    if (active && !isPartyMode) {
+      isPartyMode = true;
+      overlayEl?.classList.add("active");
+      canvas.classList.add("party-canvas-zoom");
+      partyMusic.play().catch(() => {
+          // Spesso l'autoplay è bloccato se l'utente non ha interagito col DOM
+          statusEl.textContent = "Click to allow party music! 🎵";
+          // Aggiungiamo un listener unico per sbloccare l'audio al primo click
+          const unlockAudio = () => {
+              if (isPartyMode) partyMusic.play().catch(()=>{});
+              document.removeEventListener('click', unlockAudio);
+          };
+          document.addEventListener('click', unlockAudio);
+      });
+    } else if (!active && isPartyMode) {
+      isPartyMode = false;
+      overlayEl?.classList.remove("active");
+      canvas.classList.remove("party-canvas-zoom");
+      partyMusic.pause();
+    }
+  }
+
+  // --- API Pubblica ---
+  function init() {
+    isPartyMode = false;
+    smoothedBrightness = null;
+    baselineBrightness = null;
+    darkSince = null;
+    brightSince = null;
+    lastFaceSeen = 0;
+    removeOverlay();
+  }
+
+  function onCameraReady() {
+    if (rafId) cancelAnimationFrame(rafId);
+    buildOverlay();
+    loop();
+  }
+
+  function stop() {
+    if (rafId) cancelAnimationFrame(rafId); rafId = null;
+    partyMusic.pause(); partyMusic.currentTime = 0;
+    isPartyMode = false;
+    // Rimuoviamo la classe da entrambi i possibili canvas (desktop/mobile)
+    if (typeof canvasDesktop !== 'undefined') canvasDesktop.classList.remove("party-canvas-zoom");
+    if (typeof canvasMobile !== 'undefined') canvasMobile.classList.remove("party-canvas-zoom");
+    // E anche dal canvas generico se usato
+    if (typeof canvas !== 'undefined') canvas.classList.remove("party-canvas-zoom");
+    removeOverlay();
+  }
+
+  // --- Logica di Rilevamento (Invariata) ---
+  function evaluateGlasses(brightness, now) {
+    if (!isPartyMode) {
+      baselineBrightness = (baselineBrightness === null)
+        ? brightness
+        : baselineBrightness * (1 - BASELINE_ALPHA) + brightness * BASELINE_ALPHA;
+    }
+    if (baselineBrightness === null || baselineBrightness < 8) return; // Troppo scuro per calcolare baseline
+
+    const ratio = brightness / baselineBrightness;
+    if (ratio < ENTER_RATIO) {
+      brightSince = null;
+      if (darkSince === null) darkSince = now;
+      if (!isPartyMode && (now - darkSince) >= ON_DELAY_MS) togglePartyMode(true);
+    } else if (ratio > EXIT_RATIO) {
+      darkSince = null;
+      if (brightSince === null) brightSince = now;
+      if (isPartyMode && (now - brightSince) >= OFF_DELAY_MS) togglePartyMode(false);
+    } else {
+      darkSince = null;
+      brightSince = null;
+    }
+  }
+
+  function loop() {
+    rafId = requestAnimationFrame(loop);
+    // Assumiamo che queste funzioni/variabili globali esistano nel contesto principale
+    // drawWebcamTo(ctx, 0); 
+    // ctx, globalFaceData, point(), statusEl devono essere accessibili
+
+    if (typeof drawWebcamTo !== 'function' || typeof ctx === 'undefined') return;
+    drawWebcamTo(ctx, 0);
+
+    const face = typeof globalFaceData !== 'undefined' ? globalFaceData : null;
+    const now = performance.now();
+
+    if (face) {
+      const nose = point(face[1]);
+      if (overlayEl) {
+        // Aggiorna il centro della vignetta sul naso
+        overlayEl.style.setProperty("--vx", `${(nose.x / canvas.width) * 100}%`);
+        overlayEl.style.setProperty("--vy", `${(nose.y / canvas.height) * 100}%`);
+      }
+
+      // Analisi luminosità zona occhi (invariata)
+      const eyeIdx = [33, 133, 362, 263];
+      let minX = canvas.width, maxX = 0, minY = canvas.height, maxY = 0;
+      eyeIdx.forEach(i => {
+        const p = point(face[i]);
+        if (p.x < minX) minX = p.x;
+        if (p.x > maxX) maxX = p.x;
+        if (p.y < minY) minY = p.y;
+        if (p.y > maxY) maxY = p.y;
+      });
+      const p33 = point(face[33]), p263 = point(face[263]);
+      const faceScale = Math.hypot(p263.x - p33.x, p263.y - p33.y);
+      const padX = faceScale * 0.05, padY = faceScale * 0.16;
+      minX = Math.max(0, minX - padX); maxX = Math.min(canvas.width, maxX + padX);
+      minY = Math.max(0, minY - padY); maxY = Math.min(canvas.height, maxY + padY);
+      const w = maxX - minX, h = maxY - minY;
+
+      if (w > 0 && h > 0) {
+        try {
+          const frame = ctx.getImageData(minX, minY, w, h);
+          const data = frame.data;
+          let total = 0, count = 0;
+          const step = 4 * SAMPLE_STRIDE;
+          for (let i = 0; i < data.length; i += step) {
+            total += (data[i] + data[i + 1] + data[i + 2]) / 3;
+            count++;
+          }
+          if (count > 0) {
+            const avg = total / count;
+            smoothedBrightness = (smoothedBrightness === null)
+              ? avg
+              : smoothedBrightness * (1 - SMOOTHING) + avg * SMOOTHING;
+            evaluateGlasses(smoothedBrightness, now);
+          }
+        } catch (e) {
+            // getImageData può fallire in cross-origin, ignoriamo
+        }
+      }
+      lastFaceSeen = now;
+      if (typeof statusEl !== 'undefined') {
+          statusEl.textContent = isPartyMode ? "PARTY MODE — GLASSES ON! 🕶️✨" : "Put on sunglasses to start the party";
+      }
+    } else {
+      // Volto perso
+      if (now - lastFaceSeen > FACE_LOST_GRACE_MS) {
+        togglePartyMode(false);
+        smoothedBrightness = null;
+        baselineBrightness = null;
+        darkSince = null;
+        brightSince = null;
+        if (overlayEl) {
+          overlayEl.style.setProperty("--vx", "50%");
+          overlayEl.style.setProperty("--vy", "50%");
+        }
+      }
+      if (typeof statusEl !== 'undefined') {
+          statusEl.textContent = "Show your face to the camera";
+      }
+    }
+  }
+
+  return { init, onCameraReady, stop };
+}
+
     // ===================== RUNTIMES REGISTRY =====================
     const runtimes = {
       electric:    createElectric(),
@@ -1305,6 +1959,9 @@
       butterfly:   createFaceFilter("butterfly"),
       glitch:      createGlitchFrame(),
       telekinesis: createTelekinesis(),
+      graffiti:    createGraffiti(),
+      spiderweb:   createSpiderweb(),
+      party:       createParty(),
     };
 
     clearCanvas();
