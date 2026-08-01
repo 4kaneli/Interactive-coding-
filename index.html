@@ -354,9 +354,42 @@
     @media (max-width: 768px) {
       body.project-open { overflow: auto; }
     }
+
+    /* Custom scroll indicator (mobile only) */
+    #scrollIndicator {
+      display: none;
+      position: fixed;
+      top: calc(14px + var(--safe-top));
+      right: calc(5px + var(--safe-right));
+      bottom: calc(14px + var(--safe-bottom));
+      width: 3px;
+      z-index: 500;
+      pointer-events: none;
+    }
+    #scrollIndicator .track {
+      position: absolute;
+      inset: 0;
+      background: var(--line);
+      border-radius: 3px;
+    }
+    #scrollIndicator .thumb {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0;
+      width: 3px;
+      border-radius: 3px;
+      background: var(--fg);
+      box-shadow: 0 0 6px rgba(13,255,0,.55);
+    }
+    @media (max-width: 768px) {
+      #scrollIndicator.active { display: block; }
+    }
   </style>
 </head>
 <body>
+  <div id="scrollIndicator"><div class="track"></div><div class="thumb" id="scrollThumb"></div></div>
+
   <section id="view-splash" class="view splash">
     <div class="splash-inner">
       <p class="mini">interactive webcam filters</p>
@@ -513,9 +546,49 @@
       });
     }
 
+    // --- Custom scroll indicator (mobile) ---
+    const scrollIndicator = document.getElementById("scrollIndicator");
+    const scrollThumb = document.getElementById("scrollThumb");
+    let activeScrollEl = window;
+
+    function getScrollMetrics(el) {
+      if (el === window) {
+        const doc = document.scrollingElement || document.documentElement;
+        return { top: doc.scrollTop, height: doc.scrollHeight, client: doc.clientHeight };
+      }
+      return { top: el.scrollTop, height: el.scrollHeight, client: el.clientHeight };
+    }
+
+    function updateScrollIndicator() {
+      const m = getScrollMetrics(activeScrollEl);
+      const scrollable = m.height - m.client;
+      if (scrollable <= 4) {
+        scrollIndicator.classList.remove("active");
+        return;
+      }
+      scrollIndicator.classList.add("active");
+      const trackHeight = scrollIndicator.clientHeight;
+      const thumbHeight = Math.max(28, (m.client / m.height) * trackHeight);
+      const maxThumbTop = trackHeight - thumbHeight;
+      const progress = scrollable > 0 ? m.top / scrollable : 0;
+      scrollThumb.style.height = thumbHeight + "px";
+      scrollThumb.style.transform = `translateY(${maxThumbTop * progress}px)`;
+    }
+
+    function setActiveScrollTarget(el) {
+      if (activeScrollEl) activeScrollEl.removeEventListener("scroll", updateScrollIndicator);
+      activeScrollEl = el;
+      activeScrollEl.addEventListener("scroll", updateScrollIndicator, { passive: true });
+      updateScrollIndicator();
+    }
+
+    window.addEventListener("resize", updateScrollIndicator);
+    setActiveScrollTarget(window);
+
     document.getElementById("enterBtn").addEventListener("click", () => {
       splashView.classList.add("hidden");
       galleryView.classList.remove("hidden");
+      setActiveScrollTarget(window);
     });
 
     grid.innerHTML = PROJECTS.map(p => `
@@ -539,6 +612,7 @@
       projectView.classList.add("hidden");
       galleryView.classList.remove("hidden");
       document.body.classList.remove("project-open");
+      setActiveScrollTarget(window);
       clearCanvas();
     });
 
@@ -567,6 +641,8 @@
       galleryView.classList.add("hidden");
       projectView.classList.remove("hidden");
       document.body.classList.add("project-open");
+      const stageEl = projectView.querySelector(".stage");
+      setActiveScrollTarget(stageEl || window);
       updateActiveCanvas();
       clearCanvas();
       currentRuntime.init();
